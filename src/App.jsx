@@ -12,7 +12,11 @@ function MainWrapper() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [token, setToken] = useState(() => {
+    const adminToken = localStorage.getItem('gordon_admin_token');
+    if (adminToken) return adminToken;
+    return localStorage.getItem('gordon_student_token') || '';
+  });
 
   useEffect(() => {
     const urlToken = searchParams.get('token');
@@ -20,9 +24,15 @@ function MainWrapper() {
     const urlMembership = searchParams.get('membership');
 
     if (urlToken && urlEmail && urlMembership) {
-      localStorage.setItem('token', urlToken);
-      localStorage.setItem('email', urlEmail);
-      localStorage.setItem('membership', urlMembership);
+      if (urlEmail === 'admin@gordon.com') {
+        localStorage.setItem('gordon_admin_token', urlToken);
+        localStorage.setItem('gordon_admin_email', urlEmail);
+        localStorage.setItem('gordon_admin_membership', urlMembership);
+      } else {
+        localStorage.setItem('gordon_student_token', urlToken);
+        localStorage.setItem('gordon_student_email', urlEmail);
+        localStorage.setItem('gordon_student_membership', urlMembership);
+      }
       setToken(urlToken);
       
       // Clear URL params
@@ -37,7 +47,11 @@ function MainWrapper() {
       })
       .then(res => {
         setUser(res.data);
-        localStorage.setItem('membership', res.data.membership_level);
+        if (res.data.email === 'admin@gordon.com') {
+          localStorage.setItem('gordon_admin_membership', res.data.membership_level);
+        } else {
+          localStorage.setItem('gordon_student_membership', res.data.membership_level);
+        }
       })
       .catch(err => {
         console.error("Session expired:", err);
@@ -47,7 +61,15 @@ function MainWrapper() {
   }, [token]);
 
   const handleSignOut = () => {
-    localStorage.clear();
+    if (user && user.email === 'admin@gordon.com') {
+      localStorage.removeItem('gordon_admin_token');
+      localStorage.removeItem('gordon_admin_email');
+      localStorage.removeItem('gordon_admin_membership');
+    } else {
+      localStorage.removeItem('gordon_student_token');
+      localStorage.removeItem('gordon_student_email');
+      localStorage.removeItem('gordon_student_membership');
+    }
     setToken('');
     setUser(null);
     window.location.href = LANDING_URL;
@@ -826,16 +848,186 @@ function UpgradePortal({ token }) {
   );
 }
 
-// 7. Admin Panel (For adding questions and courses)
+// 7. Admin Panel (Complete Courses & Lessons CRUD, Users, Dynamic Charts)
 function AdminPanel({ token }) {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState(null);
+  const [usersList, setUsersList] = useState([]);
+  const [coursesList, setCoursesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [timeFilter, setTimeFilter] = useState('All Time');
+
+  // Course form state
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [editCourseId, setEditCourseId] = useState(null);
+  const [courseTitle, setCourseTitle] = useState('');
+  const [courseDesc, setCourseDesc] = useState('');
+  const [courseThumb, setCourseThumb] = useState('');
+  const [courseDiff, setCourseDiff] = useState('Beginner');
+
+  // Lesson form state
+  const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
+  const [editLessonId, setEditLessonId] = useState(null);
+  const [lessonCourseId, setLessonCourseId] = useState('');
+  const [lessonTitle, setLessonTitle] = useState('');
+  const [lessonVideo, setLessonVideo] = useState('');
+  const [lessonText, setLessonText] = useState('');
+  const [lessonOrder, setLessonOrder] = useState(1);
+
+  // Question form state
   const [category, setCategory] = useState('CCNA');
   const [questionText, setQuestionText] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctOption, setCorrectOption] = useState('A');
   const [explanation, setExplanation] = useState('');
   const [indexNumber, setIndexNumber] = useState(51);
-  const [message, setMessage] = useState('');
 
+  // Expanded courses in CRUD list
+  const [expandedCourses, setExpandedCourses] = useState({});
+
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const loadData = () => {
+    setLoading(true);
+    setError('');
+    Promise.all([
+      axios.get(`${API_BASE}/admin/stats`, { headers }),
+      axios.get(`${API_BASE}/admin/users`, { headers }),
+      axios.get(`${API_BASE}/courses`)
+    ])
+    .then(([statsRes, usersRes, coursesRes]) => {
+      setStats(statsRes.data);
+      setUsersList(usersRes.data);
+      setCoursesList(coursesRes.data);
+      setLoading(false);
+    })
+    .catch(err => {
+      setError('Failed to fetch administrative data');
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    if (token) {
+      loadData();
+    }
+  }, [token]);
+
+  // Course CRUD
+  const handleSaveCourse = (e) => {
+    e.preventDefault();
+    const payload = {
+      title: courseTitle,
+      description: courseDesc,
+      thumbnailUrl: courseThumb,
+      difficulty: courseDiff
+    };
+
+    const request = editCourseId 
+      ? axios.put(`${API_BASE}/courses/${editCourseId}`, payload, { headers })
+      : axios.post(`${API_BASE}/courses`, payload, { headers });
+
+    request
+      .then(() => {
+        alert(editCourseId ? 'Course updated successfully!' : 'Course created successfully!');
+        setIsCourseModalOpen(false);
+        resetCourseForm();
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Error saving course'));
+  };
+
+  const handleDeleteCourse = (courseId) => {
+    if (window.confirm('Are you sure you want to delete this course and all its lessons? This action is irreversible.')) {
+      axios.delete(`${API_BASE}/courses/${courseId}`, { headers })
+        .then(() => {
+          alert('Course deleted successfully!');
+          loadData();
+        })
+        .catch(err => alert('Failed to delete course'));
+    }
+  };
+
+  const openCourseModal = (course = null) => {
+    if (course) {
+      setEditCourseId(course.id);
+      setCourseTitle(course.title);
+      setCourseDesc(course.description);
+      setCourseThumb(course.thumbnailUrl);
+      setCourseDiff(course.difficulty);
+    } else {
+      resetCourseForm();
+    }
+    setIsCourseModalOpen(true);
+  };
+
+  const resetCourseForm = () => {
+    setEditCourseId(null);
+    setCourseTitle('');
+    setCourseDesc('');
+    setCourseThumb('');
+    setCourseDiff('Beginner');
+  };
+
+  // Lesson CRUD
+  const handleSaveLesson = (e) => {
+    e.preventDefault();
+    const payload = {
+      title: lessonTitle,
+      videoUrl: lessonVideo,
+      textContent: lessonText,
+      orderIndex: parseInt(lessonOrder)
+    };
+
+    const request = editLessonId
+      ? axios.put(`${API_BASE}/courses/lessons/${editLessonId}`, payload, { headers })
+      : axios.post(`${API_BASE}/courses/${lessonCourseId}/lessons`, payload, { headers });
+
+    request
+      .then(() => {
+        alert(editLessonId ? 'Lesson updated successfully!' : 'Lesson added successfully!');
+        setIsLessonModalOpen(false);
+        resetLessonForm();
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Error saving lesson'));
+  };
+
+  const handleDeleteLesson = (lessonId) => {
+    if (window.confirm('Are you sure you want to delete this lesson?')) {
+      axios.delete(`${API_BASE}/courses/lessons/${lessonId}`, { headers })
+        .then(() => {
+          alert('Lesson deleted successfully!');
+          loadData();
+        })
+        .catch(err => alert('Failed to delete lesson'));
+    }
+  };
+
+  const openLessonModal = (courseId, lesson = null) => {
+    setLessonCourseId(courseId);
+    if (lesson) {
+      setEditLessonId(lesson.id);
+      setLessonTitle(lesson.title);
+      setLessonVideo(lesson.videoUrl);
+      setLessonText(lesson.textContent);
+      setLessonOrder(lesson.orderIndex);
+    } else {
+      resetLessonForm();
+    }
+    setIsLessonModalOpen(true);
+  };
+
+  const resetLessonForm = () => {
+    setEditLessonId(null);
+    setLessonTitle('');
+    setLessonVideo('');
+    setLessonText('');
+    setLessonOrder(1);
+  };
+
+  // Questions Add
   const handleOptionChange = (idx, val) => {
     const updated = [...options];
     updated[idx] = val;
@@ -844,110 +1036,675 @@ function AdminPanel({ token }) {
 
   const handleAddQuestion = (e) => {
     e.preventDefault();
-    setMessage('');
-    // For local mock testing/API submit
-    // Make dummy post to add exam questions
-    alert("New question added to database successfully!");
-    setQuestionText('');
-    setOptions(['', '', '', '']);
-    setExplanation('');
-    setIndexNumber(indexNumber + 1);
+    const payload = {
+      category,
+      questionText,
+      options,
+      correctOption,
+      explanation,
+      indexNumber: parseInt(indexNumber)
+    };
+
+    axios.post(`${API_BASE}/exams/questions`, payload, { headers })
+      .then(() => {
+        alert("New question added to database successfully!");
+        setQuestionText('');
+        setOptions(['', '', '', '']);
+        setExplanation('');
+        setIndexNumber(indexNumber + 1);
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Failed to add question'));
   };
 
+  const toggleCourseExpand = (courseId) => {
+    setExpandedCourses(prev => ({ ...prev, [courseId]: !prev[courseId] }));
+  };
+
+  if (loading) {
+    return <div className="text-center py-16 text-slate-400">Loading administrative controls...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-16 text-red-400">{error}</div>;
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold tracking-tight">Admin Dashboard</h1>
-        <p className="text-slate-400">Upload certification study guides and practice exam questions.</p>
+    <div className="space-y-8">
+      {/* Admin Title Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight text-gradient">Admin Dashboard</h1>
+          <p className="text-slate-400">Manage courses, monitor enrollments, and view analytical performance metrics.</p>
+        </div>
+        <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs font-semibold text-slate-300">
+          <span className="h-2 w-2 bg-green-500 rounded-full animate-ping"></span>
+          <span>Live Analytics Active</span>
+        </div>
       </div>
 
-      <form onSubmit={handleAddQuestion} className="glass-panel p-8 rounded-3xl space-y-6">
-        <h2 className="text-xl font-bold border-b border-slate-900 pb-3">Create Quiz Question</h2>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-400">Exam Category</label>
+      {/* Tab Navigation */}
+      <div className="flex border-b border-slate-800 space-x-8 text-sm font-bold text-slate-400">
+        <button 
+          onClick={() => setActiveTab('overview')} 
+          className={`pb-4 transition relative ${activeTab === 'overview' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Overview & Charts
+          {activeTab === 'overview' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('courses')} 
+          className={`pb-4 transition relative ${activeTab === 'courses' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Courses & Lessons CRUD
+          {activeTab === 'courses' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('users')} 
+          className={`pb-4 transition relative ${activeTab === 'users' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Users & Enrollments
+          {activeTab === 'users' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('questions')} 
+          className={`pb-4 transition relative ${activeTab === 'questions' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Create Quiz Question
+          {activeTab === 'questions' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+      </div>
+
+      {/* 1. OVERVIEW & CHARTS TAB */}
+      {activeTab === 'overview' && stats && (
+        <div className="space-y-8 animate-fade-in">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="glass-panel p-6 rounded-3xl space-y-2">
+              <p className="text-xs font-bold text-slate-500 tracking-wider">TOTAL REVENUE</p>
+              <h3 className="text-3xl font-black text-emerald-400">${stats.total_revenue}</h3>
+              <p className="text-[10px] text-slate-500">Includes monthly/yearly subs</p>
+            </div>
+            <div className="glass-panel p-6 rounded-3xl space-y-2">
+              <p className="text-xs font-bold text-slate-500 tracking-wider">TOTAL USERS</p>
+              <h3 className="text-3xl font-black text-white">{stats.total_users}</h3>
+              <p className="text-[10px] text-slate-500">Standard & upgraded profiles</p>
+            </div>
+            <div className="glass-panel p-6 rounded-3xl space-y-2">
+              <p className="text-xs font-bold text-slate-500 tracking-wider">COURSES HOSTED</p>
+              <h3 className="text-3xl font-black text-blue-400">{stats.total_courses}</h3>
+              <p className="text-[10px] text-slate-500">{stats.total_lessons} active video lessons</p>
+            </div>
+            <div className="glass-panel p-6 rounded-3xl space-y-2">
+              <p className="text-xs font-bold text-slate-500 tracking-wider">EXAM QUESTIONS</p>
+              <h3 className="text-3xl font-black text-purple-400">{stats.total_questions}</h3>
+              <p className="text-[10px] text-slate-500">Practice questions loaded</p>
+            </div>
+          </div>
+
+          {/* Filtering Header for charts */}
+          <div className="flex items-center justify-between border-b border-slate-900 pb-4">
+            <h2 className="text-lg font-bold">Trend Analytics</h2>
             <select 
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+              value={timeFilter}
+              onChange={e => setTimeFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-800 focus:border-blue-500 text-xs font-semibold rounded-xl px-3 py-2 text-slate-300 outline-none"
             >
-              <option>CCNA</option>
-              <option>CCNP</option>
-              <option>Cybersecurity</option>
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>All Time</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-400">Index Number</label>
-            <input 
-              type="number" 
-              required
-              value={indexNumber}
-              onChange={e => setIndexNumber(parseInt(e.target.value))}
-              className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm" 
-            />
+
+          {/* SVG Charts Section */}
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Revenue Trend - SVG Line Chart */}
+            <div className="glass-panel p-6 rounded-3xl space-y-4">
+              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Revenue Growth Trend</h4>
+              <div className="h-64 flex items-end justify-center pt-4 relative">
+                {Object.keys(stats.revenue_growth).length > 0 ? (
+                  (() => {
+                    const months = Object.keys(stats.revenue_growth);
+                    const revenues = Object.values(stats.revenue_growth);
+                    const maxRevenue = Math.max(...revenues, 100);
+                    const xStep = 340 / (months.length - 1 || 1);
+                    
+                    // Generate points
+                    const points = revenues.map((r, i) => ({
+                      x: 80 + i * xStep,
+                      y: 180 - (r / maxRevenue) * 120
+                    }));
+                    
+                    const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+                    const areaD = pathD + ` L ${points[points.length - 1].x},180 L 80,180 Z`;
+                    
+                    return (
+                      <svg className="w-full h-full" viewBox="0 0 450 210">
+                        <defs>
+                          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.3"/>
+                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0"/>
+                          </linearGradient>
+                        </defs>
+                        {/* Grid Lines */}
+                        <line x1="80" y1="180" x2="420" y2="180" stroke="#1e293b" strokeWidth="1"/>
+                        <line x1="80" y1="120" x2="420" y2="120" stroke="#0f172a" strokeWidth="1"/>
+                        <line x1="80" y1="60" x2="420" y2="60" stroke="#0f172a" strokeWidth="1"/>
+                        
+                        {/* Area Fill */}
+                        <path d={areaD} fill="url(#chartGradient)" />
+                        {/* Line */}
+                        <path d={pathD} fill="none" stroke="#10B981" strokeWidth="3" />
+                        
+                        {/* Points */}
+                        {points.map((p, idx) => (
+                          <g key={idx}>
+                            <circle cx={p.x} cy={p.y} r="5" fill="#10B981" stroke="#ffffff" strokeWidth="1.5" />
+                            <text x={p.x} y={p.y - 12} fontSize="9" fontWeight="bold" fill="#cbd5e1" textAnchor="middle">${revenues[idx]}</text>
+                            <text x={p.x} y="195" fontSize="8" fontWeight="bold" fill="#64748b" textAnchor="middle">{months[idx]}</text>
+                          </g>
+                        ))}
+                      </svg>
+                    );
+                  })()
+                ) : (
+                  <p className="text-xs text-slate-500">No payment data loaded</p>
+                )}
+              </div>
+            </div>
+
+            {/* User Growth - SVG Bar Chart */}
+            <div className="glass-panel p-6 rounded-3xl space-y-4">
+              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Cumulative User Growth</h4>
+              <div className="h-64 flex items-end justify-center pt-4 relative">
+                {Object.keys(stats.user_growth).length > 0 ? (
+                  (() => {
+                    const months = Object.keys(stats.user_growth);
+                    const usersVal = Object.values(stats.user_growth);
+                    const maxUsers = Math.max(...usersVal, 10);
+                    const xStep = 340 / months.length;
+                    
+                    return (
+                      <svg className="w-full h-full" viewBox="0 0 450 210">
+                        {/* Grid Lines */}
+                        <line x1="80" y1="180" x2="420" y2="180" stroke="#1e293b" strokeWidth="1"/>
+                        <line x1="80" y1="120" x2="420" y2="120" stroke="#0f172a" strokeWidth="1"/>
+                        <line x1="80" y1="60" x2="420" y2="60" stroke="#0f172a" strokeWidth="1"/>
+                        
+                        {/* Bars */}
+                        {usersVal.map((val, idx) => {
+                          const barWidth = 24;
+                          const x = 90 + idx * xStep;
+                          const height = (val / maxUsers) * 120;
+                          const y = 180 - height;
+                          
+                          return (
+                            <g key={idx}>
+                              <rect 
+                                x={x - barWidth / 2} 
+                                y={y} 
+                                width={barWidth} 
+                                height={height} 
+                                fill="#3B82F6" 
+                                rx="3"
+                                className="transition hover:fill-blue-400"
+                              />
+                              <text x={x} y={y - 8} fontSize="9" fontWeight="bold" fill="#cbd5e1" textAnchor="middle">{val}</text>
+                              <text x={x} y="195" fontSize="8" fontWeight="bold" fill="#64748b" textAnchor="middle">{months[idx]}</text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    );
+                  })()
+                ) : (
+                  <p className="text-xs text-slate-500">No user signup logs found</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400">Question Text</label>
-          <textarea 
-            rows="3" 
-            required 
-            value={questionText}
-            onChange={e => setQuestionText(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
-          ></textarea>
+      {/* 2. COURSES & LESSONS CRUD TAB */}
+      {activeTab === 'courses' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Course Library</h2>
+            <button 
+              onClick={() => openCourseModal()}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-xs flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Course</span>
+            </button>
+          </div>
+
+          {/* Courses CRUD Table */}
+          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-xs font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Thumbnail & Course Title</th>
+                  <th className="px-6 py-4">Difficulty</th>
+                  <th className="px-6 py-4">Lessons</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900">
+                {coursesList.map((course) => (
+                  <React.Fragment key={course.id}>
+                    <tr className="hover:bg-slate-900/20 transition">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-4">
+                          <img src={course.thumbnailUrl} alt="" className="h-10 w-16 object-cover rounded-lg border border-slate-800" />
+                          <div>
+                            <span className="font-bold text-slate-100 block">{course.title}</span>
+                            <span className="text-xs text-slate-500 truncate max-w-sm block">{course.description}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          course.difficulty === 'Advanced' 
+                            ? 'bg-red-950/20 text-red-400 border-red-500/20' 
+                            : course.difficulty === 'Intermediate'
+                            ? 'bg-amber-950/20 text-amber-400 border-amber-500/20'
+                            : 'bg-green-950/20 text-green-400 border-green-500/20'
+                        }`}>
+                          {course.difficulty}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button 
+                          onClick={() => toggleCourseExpand(course.id)}
+                          className="text-xs text-blue-400 hover:text-blue-300 font-bold transition flex items-center space-x-1"
+                        >
+                          <span>{course.lessons?.length || 0} Lessons</span>
+                          <span className="text-[10px]">{expandedCourses[course.id] ? '▲' : '▼'}</span>
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2">
+                        <button 
+                          onClick={() => openCourseModal(course)}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold border border-slate-800 transition"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg text-xs font-semibold transition"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                    
+                    {/* Expanded lessons section */}
+                    {expandedCourses[course.id] && (
+                      <tr>
+                        <td colSpan="4" className="bg-slate-900/30 px-8 py-4">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                              <h5 className="text-xs font-bold text-slate-400 tracking-wider">LESSON PLAYLIST FOR {course.title.toUpperCase()}</h5>
+                              <button 
+                                onClick={() => openLessonModal(course.id)}
+                                className="text-[11px] text-blue-400 hover:text-blue-300 font-bold transition flex items-center space-x-1"
+                              >
+                                <Plus className="h-3 w-3" />
+                                <span>Add Lesson</span>
+                              </button>
+                            </div>
+                            
+                            {course.lessons && course.lessons.length > 0 ? (
+                              <div className="space-y-2">
+                                {course.lessons.map((lesson) => (
+                                  <div key={lesson.id} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-900 hover:border-slate-800 transition">
+                                    <div className="space-y-0.5">
+                                      <span className="text-xs font-bold text-slate-300">{lesson.orderIndex}. {lesson.title}</span>
+                                      <span className="text-[10px] text-slate-500 block truncate max-w-lg">{lesson.videoUrl}</span>
+                                    </div>
+                                    <div className="space-x-2">
+                                      <button 
+                                        onClick={() => openLessonModal(course.id, lesson)}
+                                        className="text-[10px] text-slate-400 hover:text-white transition"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteLesson(lesson.id)}
+                                        className="text-[10px] text-red-400 hover:text-red-300 transition"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-500 italic py-2">No lessons added under this course yet.</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 2.1 COURSE MODAL / FORM */}
+          {isCourseModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <form onSubmit={handleSaveCourse} className="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6 relative animate-fade-in">
+                <button 
+                  type="button" 
+                  onClick={() => setIsCourseModalOpen(false)}
+                  className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                <h3 className="text-xl font-bold border-b border-slate-900 pb-3">{editCourseId ? 'Edit Course Details' : 'Create Course'}</h3>
+                
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Course Title</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={courseTitle}
+                      onChange={e => setCourseTitle(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Description</label>
+                    <textarea 
+                      rows="3" 
+                      required 
+                      value={courseDesc}
+                      onChange={e => setCourseDesc(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                    ></textarea>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Thumbnail URL</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={courseThumb}
+                      onChange={e => setCourseThumb(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Difficulty Level</label>
+                    <select 
+                      value={courseDiff}
+                      onChange={e => setCourseDiff(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    >
+                      <option>Beginner</option>
+                      <option>Intermediate</option>
+                      <option>Advanced</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex space-x-4 pt-2">
+                  <button 
+                    type="submit"
+                    className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
+                  >
+                    Save Course
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsCourseModalOpen(false)}
+                    className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* 2.2 LESSON MODAL / FORM */}
+          {isLessonModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <form onSubmit={handleSaveLesson} className="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6 relative animate-fade-in">
+                <button 
+                  type="button" 
+                  onClick={() => setIsLessonModalOpen(false)}
+                  className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                <h3 className="text-xl font-bold border-b border-slate-900 pb-3">{editLessonId ? 'Edit Lesson Parameters' : 'Add Lesson to Course'}</h3>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-xs font-semibold text-slate-400">Lesson Title</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={lessonTitle}
+                        onChange={e => setLessonTitle(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-400">Order Index</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={lessonOrder}
+                        onChange={e => setLessonOrder(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Cloudinary / Video Stream URL</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={lessonVideo}
+                      onChange={e => setLessonVideo(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Lesson Text / Study Guide</label>
+                    <textarea 
+                      rows="4" 
+                      required 
+                      value={lessonText}
+                      onChange={e => setLessonText(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="flex space-x-4 pt-2">
+                  <button 
+                    type="submit"
+                    className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
+                  >
+                    Save Lesson
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsLessonModalOpen(false)}
+                    className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
+      )}
 
-        <div className="space-y-3">
-          <label className="text-xs font-semibold text-slate-400">Choices</label>
-          {options.map((opt, idx) => (
-            <div key={idx} className="flex items-center space-x-3">
-              <span className="text-xs font-bold text-slate-500">{String.fromCharCode(65 + idx)}.</span>
+      {/* 3. USERS & ENROLLMENTS TAB */}
+      {activeTab === 'users' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Enrollments Rates Summary */}
+          <div className="glass-panel p-6 rounded-3xl space-y-4">
+            <h4 className="text-xs font-bold text-slate-400 tracking-wider uppercase">Active Course Enrollments</h4>
+            <div className="grid sm:grid-cols-3 gap-6">
+              {stats && stats.enrollments.map((course) => (
+                <div key={course.id} className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-xs text-slate-400 block font-semibold truncate max-w-[150px]">{course.title}</span>
+                    <span className="text-2xl font-black text-white">{course.enrollment_count}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Enrolled</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* User Progression list */}
+          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-xs font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">User Profile Email</th>
+                  <th className="px-6 py-4">Membership Level</th>
+                  <th className="px-6 py-4">Lessons Completed</th>
+                  <th className="px-6 py-4">Exams Taken</th>
+                  <th className="px-6 py-4">Total Revenue ($)</th>
+                  <th className="px-6 py-4 text-right">Registered</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900 text-slate-300">
+                {usersList.map((userItem) => (
+                  <tr key={userItem.id} className="hover:bg-slate-900/20 transition">
+                    <td className="px-6 py-4 font-bold text-slate-100">{userItem.email}</td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        userItem.membership_level === 'premium' 
+                          ? 'bg-indigo-950/20 text-indigo-400 border-indigo-500/20' 
+                          : 'bg-slate-800/40 text-slate-400 border-slate-700/20'
+                      }`}>
+                        {userItem.membership_level.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-semibold">{userItem.completed_lessons_count}</td>
+                    <td className="px-6 py-4 font-semibold">{userItem.exam_attempts_count}</td>
+                    <td className="px-6 py-4 font-black text-emerald-400">${userItem.total_spent}</td>
+                    <td className="px-6 py-4 text-right text-xs text-slate-500">
+                      {new Date(userItem.created_at).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 4. CREATE QUIZ QUESTION TAB */}
+      {activeTab === 'questions' && (
+        <form onSubmit={handleAddQuestion} className="glass-panel p-8 rounded-3xl space-y-6 max-w-2xl mx-auto animate-fade-in">
+          <h2 className="text-xl font-bold border-b border-slate-900 pb-3">Create Quiz Question</h2>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400">Exam Category</label>
+              <select 
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+              >
+                <option>CCNA</option>
+                <option>CCNP</option>
+                <option>Cybersecurity</option>
+                <option>Networking</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400">Index Number</label>
               <input 
-                type="text" 
-                required 
-                placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                value={opt}
-                onChange={e => handleOptionChange(idx, e.target.value)}
-                className="flex-grow bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm" 
+                type="number" 
+                required
+                value={indexNumber}
+                onChange={e => setIndexNumber(parseInt(e.target.value))}
+                className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm" 
               />
             </div>
-          ))}
-        </div>
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400">Correct Option</label>
-          <select 
-            value={correctOption}
-            onChange={e => setCorrectOption(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
-          >
-            <option>A</option>
-            <option>B</option>
-            <option>C</option>
-            <option>D</option>
-          </select>
-        </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-400">Question Text</label>
+            <textarea 
+              rows="3" 
+              required 
+              value={questionText}
+              onChange={e => setQuestionText(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+              placeholder="Input CCNA/CCNP certification practice question..."
+            ></textarea>
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400">Answer Explanation</label>
-          <textarea 
-            rows="3" 
-            required 
-            value={explanation}
-            onChange={e => setExplanation(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
-          ></textarea>
-        </div>
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-slate-400">Choices</label>
+            {options.map((opt, idx) => (
+              <div key={idx} className="flex items-center space-x-3">
+                <span className="text-xs font-bold text-slate-500">{String.fromCharCode(65 + idx)}.</span>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                  value={opt}
+                  onChange={e => handleOptionChange(idx, e.target.value)}
+                  className="flex-grow bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm" 
+                />
+              </div>
+            ))}
+          </div>
 
-        <button type="submit" className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">
-          Add Question to Bank
-        </button>
-      </form>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-400">Correct Option</label>
+            <select 
+              value={correctOption}
+              onChange={e => setCorrectOption(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+            >
+              <option>A</option>
+              <option>B</option>
+              <option>C</option>
+              <option>D</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-400">Answer Explanation</label>
+            <textarea 
+              rows="3" 
+              required 
+              value={explanation}
+              onChange={e => setExplanation(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+              placeholder="Why is this option correct? Write explanation for CCNA candidates..."
+            ></textarea>
+          </div>
+
+          <button type="submit" className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition">
+            Add Question to Bank
+          </button>
+        </form>
+      )}
     </div>
-  );
 }
 
 // Manually import useParams logic and standard routing setup
