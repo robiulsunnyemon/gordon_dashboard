@@ -4,6 +4,7 @@ import { Shield, BookOpen, Key, Server, Check, ArrowRight, X, Mail, User, Info, 
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'http://localhost:3000';
 
 // SSO Token Loader & Router Wrapper
 function MainWrapper() {
@@ -48,7 +49,7 @@ function MainWrapper() {
     localStorage.clear();
     setToken('');
     setUser(null);
-    window.location.href = 'http://localhost:3000';
+    window.location.href = LANDING_URL;
   };
 
   return (
@@ -117,7 +118,7 @@ function MainWrapper() {
             </button>
           ) : (
             <a 
-              href="http://localhost:3000"
+              href={LANDING_URL}
               className="w-full flex items-center justify-center space-x-3 p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition text-sm"
             >
               <Key className="h-4 w-4" />
@@ -953,7 +954,7 @@ import { useParams } from 'react-router-dom';
 
 export default function App() {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <MainWrapper />
     </Router>
   );
