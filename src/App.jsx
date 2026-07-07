@@ -5,6 +5,7 @@ import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
 const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'http://localhost:3000';
+const DASHBOARD_URL = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "");
 
 // SSO Token Loader & Router Wrapper
 function MainWrapper() {
@@ -719,8 +720,8 @@ function UpgradePortal({ token }) {
     setError('');
     axios.post(`${API_BASE}/payments/create-checkout-session`, {
       plan_type: plan,
-      success_url: 'http://localhost:3001/upgrade',
-      cancel_url: 'http://localhost:3001/upgrade'
+      success_url: `${DASHBOARD_URL}/upgrade`,
+      cancel_url: `${DASHBOARD_URL}/upgrade`
     }, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -748,7 +749,7 @@ function UpgradePortal({ token }) {
           setLoading(false);
           // Refresh user session after successful payment
           setTimeout(() => {
-            window.location.href = 'http://localhost:3001/';
+            window.location.href = DASHBOARD_URL + '/';
           }, 3000);
         })
         .catch(err => {
