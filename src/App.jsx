@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useSearchPar
 import { Shield, BookOpen, Key, Server, Check, ArrowRight, X, Mail, User, Info, FileText, Play, CheckSquare, Award, Clock, AlertTriangle, LogOut, Lock, Plus } from 'lucide-react';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
 
 // SSO Token Loader & Router Wrapper
 function MainWrapper() {
