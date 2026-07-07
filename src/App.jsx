@@ -1705,6 +1705,7 @@ function AdminPanel({ token }) {
         </form>
       )}
     </div>
+  );
 }
 
 // Manually import useParams logic and standard routing setup
