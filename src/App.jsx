@@ -923,6 +923,16 @@ function AdminPanel({ token }) {
   const [subCta, setSubCta] = useState('Start Free');
   const [subFeatured, setSubFeatured] = useState(false);
 
+  // Testimonials Management state
+  const [testimonialsList, setTestimonialsList] = useState([]);
+  const [isTestimonialModalOpen, setIsTestimonialModalOpen] = useState(false);
+  const [editTestimonialId, setEditTestimonialId] = useState(null);
+  const [testName, setTestName] = useState('');
+  const [testRole, setTestRole] = useState('');
+  const [testCompany, setTestCompany] = useState('');
+  const [testRating, setTestRating] = useState(5);
+  const [testText, setTestText] = useState('');
+
   const headers = { Authorization: `Bearer ${token}` };
 
   const loadData = () => {
@@ -934,14 +944,16 @@ function AdminPanel({ token }) {
       axios.get(`${API_BASE}/courses`),
       axios.get(`${API_BASE}/blog/admin/all`, { headers }),
       axios.get(`${API_BASE}/about`),
-      axios.get(`${API_BASE}/subscriptions`)
+      axios.get(`${API_BASE}/subscriptions`),
+      axios.get(`${API_BASE}/testimonials`)
     ])
-    .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes, subRes]) => {
+    .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes, subRes, testRes]) => {
       setStats(statsRes.data);
       setUsersList(usersRes.data);
       setCoursesList(coursesRes.data);
       setBlogPostsList(blogRes.data);
       setSubscriptionsList(subRes.data);
+      setTestimonialsList(testRes.data);
       if (aboutRes.data) {
         setAboutTitle(aboutRes.data.title || 'About Gordon IT Academy');
         setAboutSubTitle(aboutRes.data.subTitle || 'About');
@@ -959,6 +971,72 @@ function AdminPanel({ token }) {
       setError('Failed to fetch administrative data');
       setLoading(false);
     });
+  };
+
+  const handleSaveTestimonial = (e) => {
+    e.preventDefault();
+    const payload = {
+      name: testName,
+      role: testRole,
+      company: testCompany,
+      rating: parseInt(testRating),
+      text: testText
+    };
+
+    const request = editTestimonialId
+      ? axios.put(`${API_BASE}/testimonials/${editTestimonialId}`, payload, { headers })
+      : axios.post(`${API_BASE}/testimonials`, payload, { headers });
+
+    request
+      .then(() => {
+        alert(editTestimonialId ? 'Testimonial updated successfully!' : 'Testimonial added successfully!');
+        setIsTestimonialModalOpen(false);
+        resetTestimonialForm();
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Error saving testimonial'));
+  };
+
+  const handleDeleteTestimonial = (reviewId) => {
+    if (reviewId.startsWith('default-')) {
+      alert('Cannot delete default system templates!');
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this student review?')) {
+      axios.delete(`${API_BASE}/testimonials/${reviewId}`, { headers })
+        .then(() => {
+          alert('Testimonial deleted successfully!');
+          loadData();
+        })
+        .catch(err => alert('Failed to delete testimonial'));
+    }
+  };
+
+  const openTestimonialModal = (review = null) => {
+    if (review) {
+      if (review.id && review.id.startsWith('default-')) {
+        alert('Default reviews are system templates and cannot be edited. Please create a new custom review instead.');
+        return;
+      }
+      setEditTestimonialId(review.id);
+      setTestName(review.name);
+      setTestRole(review.role);
+      setTestCompany(review.company);
+      setTestRating(review.rating);
+      setTestText(review.text);
+    } else {
+      resetTestimonialForm();
+    }
+    setIsTestimonialModalOpen(true);
+  };
+
+  const resetTestimonialForm = () => {
+    setEditTestimonialId(null);
+    setTestName('');
+    setTestRole('');
+    setTestCompany('');
+    setTestRating(5);
+    setTestText('');
   };
 
   const handleSaveSubscriptionPlan = (e) => {
@@ -1367,6 +1445,13 @@ function AdminPanel({ token }) {
         >
           Subscription Plans
           {activeTab === 'subscriptions' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('testimonials')} 
+          className={`pb-4 transition relative ${activeTab === 'testimonials' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Testimonials
+          {activeTab === 'testimonials' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -2489,6 +2574,175 @@ function AdminPanel({ token }) {
                 <button 
                   type="button" 
                   onClick={() => setIsSubscriptionModalOpen(false)}
+                  className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. TESTIMONIALS MANAGEMENT TAB */}
+      {activeTab === 'testimonials' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Student Success Reviews</h2>
+            <button 
+              onClick={() => openTestimonialModal()} 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Review</span>
+            </button>
+          </div>
+
+          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-xs font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Student Name</th>
+                  <th className="px-6 py-4">Role / Title</th>
+                  <th className="px-6 py-4">Company</th>
+                  <th className="px-6 py-4">Rating</th>
+                  <th className="px-6 py-4">Review Text</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900 text-slate-300">
+                {testimonialsList.map((review) => (
+                  <tr key={review.id} className="hover:bg-slate-900/20 transition">
+                    <td className="px-6 py-4 font-bold text-slate-100">
+                      {review.name}
+                      {review.id.startsWith('default-') && (
+                        <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">SYSTEM</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-xs">{review.role}</td>
+                    <td className="px-6 py-4 text-xs text-slate-400">{review.company}</td>
+                    <td className="px-6 py-4 font-semibold text-yellow-400">{'★'.repeat(review.rating)}</td>
+                    <td className="px-6 py-4 text-xs truncate max-w-[200px] text-slate-400">{review.text}</td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button 
+                        onClick={() => openTestimonialModal(review)}
+                        disabled={review.id.startsWith('default-')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                          review.id.startsWith('default-')
+                            ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTestimonial(review.id)}
+                        disabled={review.id.startsWith('default-')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                          review.id.startsWith('default-')
+                            ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                            : 'bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20'
+                        }`}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Testimonial Modal */}
+      {isTestimonialModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setIsTestimonialModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+              <X className="h-6 w-6" />
+            </button>
+
+            <h2 className="text-xl font-bold border-b border-slate-900 pb-3">
+              {editTestimonialId ? 'Edit Success Review' : 'Add Student Success Review'}
+            </h2>
+
+            <form onSubmit={handleSaveTestimonial} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Student Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={testName}
+                    onChange={e => setTestName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. Alex van den Berg"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Role / Designation</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={testRole}
+                    onChange={e => setTestRole(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. Network Engineer"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Company</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={testCompany}
+                    onChange={e => setTestCompany(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. KPN Netherlands"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Rating (1 to 5 Stars)</label>
+                  <select 
+                    value={testRating}
+                    onChange={e => setTestRating(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  >
+                    <option value="5">★★★★★ (5 Stars)</option>
+                    <option value="4">★★★★ (4 Stars)</option>
+                    <option value="3">★★★ (3 Stars)</option>
+                    <option value="2">★★ (2 Stars)</option>
+                    <option value="1">★ (1 Star)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Review Text / Success Story</label>
+                <textarea 
+                  rows="4" 
+                  required 
+                  value={testText}
+                  onChange={e => setTestText(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                  placeholder="Passed my CCNA on the first attempt..."
+                ></textarea>
+              </div>
+
+              <div className="flex space-x-4 pt-2">
+                <button 
+                  type="submit"
+                  className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
+                >
+                  Save Testimonial
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setIsTestimonialModalOpen(false)}
                   className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
                 >
                   Cancel
