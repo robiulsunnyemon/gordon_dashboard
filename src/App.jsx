@@ -886,6 +886,18 @@ function AdminPanel({ token }) {
   // Expanded courses in CRUD list
   const [expandedCourses, setExpandedCourses] = useState({});
 
+  // Blog Posts Management state
+  const [blogPostsList, setBlogPostsList] = useState([]);
+  const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
+  const [editBlogPostId, setEditBlogPostId] = useState(null);
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogExcerpt, setBlogExcerpt] = useState('');
+  const [blogContent, setBlogContent] = useState('');
+  const [blogCategory, setBlogCategory] = useState('CCNA');
+  const [blogCoverImage, setBlogCoverImage] = useState('');
+  const [blogReadTime, setBlogReadTime] = useState('5 min read');
+  const [blogPublished, setBlogPublished] = useState(false);
+
   const headers = { Authorization: `Bearer ${token}` };
 
   const loadData = () => {
@@ -894,12 +906,14 @@ function AdminPanel({ token }) {
     Promise.all([
       axios.get(`${API_BASE}/admin/stats`, { headers }),
       axios.get(`${API_BASE}/admin/users`, { headers }),
-      axios.get(`${API_BASE}/courses`)
+      axios.get(`${API_BASE}/courses`),
+      axios.get(`${API_BASE}/blog/admin/all`, { headers })
     ])
-    .then(([statsRes, usersRes, coursesRes]) => {
+    .then(([statsRes, usersRes, coursesRes, blogRes]) => {
       setStats(statsRes.data);
       setUsersList(usersRes.data);
       setCoursesList(coursesRes.data);
+      setBlogPostsList(blogRes.data);
       setLoading(false);
     })
     .catch(err => {
@@ -913,6 +927,80 @@ function AdminPanel({ token }) {
       loadData();
     }
   }, [token]);
+
+  // Blog Post CRUD Actions
+  const handleSaveBlogPost = (e) => {
+    e.preventDefault();
+    const payload = {
+      title: blogTitle,
+      excerpt: blogExcerpt,
+      content: blogContent,
+      category: blogCategory,
+      coverImage: blogCoverImage || null,
+      readTime: blogReadTime || '5 min read',
+      published: blogPublished
+    };
+
+    const request = editBlogPostId
+      ? axios.put(`${API_BASE}/blog/${editBlogPostId}`, payload, { headers })
+      : axios.post(`${API_BASE}/blog`, payload, { headers });
+
+    request
+      .then(() => {
+        alert(editBlogPostId ? 'Blog post updated successfully!' : 'Blog post created successfully!');
+        setIsBlogModalOpen(false);
+        resetBlogForm();
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Error saving blog post'));
+  };
+
+  const handleDeleteBlogPost = (postId) => {
+    if (window.confirm('Are you sure you want to delete this blog post?')) {
+      axios.delete(`${API_BASE}/blog/${postId}`, { headers })
+        .then(() => {
+          alert('Blog post deleted successfully!');
+          loadData();
+        })
+        .catch(err => alert('Failed to delete blog post'));
+    }
+  };
+
+  const handleTogglePublishBlogPost = (postId) => {
+    axios.patch(`${API_BASE}/blog/${postId}/publish`, {}, { headers })
+      .then((res) => {
+        alert(`Blog post is now a ${res.data.status}!`);
+        loadData();
+      })
+      .catch(err => alert('Failed to toggle publish status'));
+  };
+
+  const openBlogModal = (post = null) => {
+    if (post) {
+      setEditBlogPostId(post.id);
+      setBlogTitle(post.title);
+      setBlogExcerpt(post.excerpt);
+      setBlogContent(post.content);
+      setBlogCategory(post.category);
+      setBlogCoverImage(post.coverImage || '');
+      setBlogReadTime(post.readTime || '5 min read');
+      setBlogPublished(post.published);
+    } else {
+      resetBlogForm();
+    }
+    setIsBlogModalOpen(true);
+  };
+
+  const resetBlogForm = () => {
+    setEditBlogPostId(null);
+    setBlogTitle('');
+    setBlogExcerpt('');
+    setBlogContent('');
+    setBlogCategory('CCNA');
+    setBlogCoverImage('');
+    setBlogReadTime('5 min read');
+    setBlogPublished(false);
+  };
 
   // Course CRUD
   const handleSaveCourse = (e) => {
@@ -1112,6 +1200,13 @@ function AdminPanel({ token }) {
         >
           Create Quiz Question
           {activeTab === 'questions' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('blog')} 
+          className={`pb-4 transition relative ${activeTab === 'blog' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Blog Posts
+          {activeTab === 'blog' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -1703,6 +1798,212 @@ function AdminPanel({ token }) {
             Add Question to Bank
           </button>
         </form>
+      )}
+
+      {/* 5. BLOG POSTS MANAGEMENT TAB */}
+      {activeTab === 'blog' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Blog Posts Management</h2>
+            <button 
+              onClick={() => openBlogModal()} 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Blog Post</span>
+            </button>
+          </div>
+
+          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-xs font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Title</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Read Time</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Created At</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900 text-slate-300">
+                {blogPostsList.map((post) => (
+                  <tr key={post.id} className="hover:bg-slate-900/20 transition">
+                    <td className="px-6 py-4 font-bold text-slate-100">{post.title}</td>
+                    <td className="px-6 py-4">
+                      <span className="badge bg-slate-800 text-blue-400 px-2 py-0.5 rounded border border-slate-700">{post.category}</span>
+                    </td>
+                    <td className="px-6 py-4 text-xs">{post.readTime}</td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                        post.published 
+                          ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20' 
+                          : 'bg-amber-950/20 text-amber-400 border-amber-500/20'
+                      }`}>
+                        {post.published ? 'PUBLISHED' : 'DRAFT'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {new Date(post.createdAt).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button 
+                        onClick={() => handleTogglePublishBlogPost(post.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                          post.published 
+                            ? 'bg-amber-950/20 text-amber-400 border-amber-500/20 hover:bg-amber-900/20' 
+                            : 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20 hover:bg-emerald-900/20'
+                        }`}
+                      >
+                        {post.published ? 'Unpublish' : 'Publish'}
+                      </button>
+                      <button 
+                        onClick={() => openBlogModal(post)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition border border-slate-700"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteBlogPost(post.id)}
+                        className="px-3 py-1.5 bg-red-950/20 hover:bg-red-900/20 text-red-400 rounded-lg text-xs font-bold transition border border-red-500/20"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {blogPostsList.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-slate-500">No blog posts found. Create your first post!</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Blog Modal */}
+      {isBlogModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setIsBlogModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+              <X className="h-6 w-6" />
+            </button>
+
+            <h2 className="text-xl font-bold border-b border-slate-900 pb-3">
+              {editBlogPostId ? 'Edit Blog Post' : 'Create Blog Post'}
+            </h2>
+
+            <form onSubmit={handleSaveBlogPost} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Post Title</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={blogTitle}
+                  onChange={e => setBlogTitle(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  placeholder="e.g. How to subnet like a pro in CCNA exam"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Category</label>
+                  <select 
+                    value={blogCategory}
+                    onChange={e => setBlogCategory(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  >
+                    <option>CCNA</option>
+                    <option>CCNP</option>
+                    <option>Cybersecurity</option>
+                    <option>Automation</option>
+                    <option>Career</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Read Time</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={blogReadTime}
+                    onChange={e => setBlogReadTime(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. 5 min read"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Cover Image URL</label>
+                <input 
+                  type="text" 
+                  value={blogCoverImage}
+                  onChange={e => setBlogCoverImage(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  placeholder="https://images.unsplash.com/photo-..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Short Excerpt (Summary)</label>
+                <textarea 
+                  rows="2" 
+                  required 
+                  value={blogExcerpt}
+                  onChange={e => setBlogExcerpt(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                  placeholder="Write a quick summary of the post for lists..."
+                ></textarea>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Post Content (Markdown supported)</label>
+                <textarea 
+                  rows="8" 
+                  required 
+                  value={blogContent}
+                  onChange={e => setBlogContent(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm font-mono"
+                  placeholder="# Welcome to Cisco CCNA Subnetting guide..."
+                ></textarea>
+              </div>
+
+              <div className="flex items-center space-x-2 py-2">
+                <input 
+                  type="checkbox" 
+                  id="blogPublished" 
+                  checked={blogPublished}
+                  onChange={e => setBlogPublished(e.target.checked)}
+                  className="rounded border-slate-800 bg-slate-900 text-blue-500 focus:ring-blue-500 h-4 w-4"
+                />
+                <label htmlFor="blogPublished" className="text-sm font-semibold text-slate-300">Publish immediately</label>
+              </div>
+
+              <div className="flex space-x-4 pt-2">
+                <button 
+                  type="submit"
+                  className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
+                >
+                  Save Post
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setIsBlogModalOpen(false)}
+                  className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
