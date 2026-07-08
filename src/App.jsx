@@ -909,6 +909,20 @@ function AdminPanel({ token }) {
     { icon: 'BookOpen', label: '', sub: '' }
   ]);
 
+  // Subscription Plans Management state
+  const [subscriptionsList, setSubscriptionsList] = useState([]);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [editSubscriptionId, setEditSubscriptionId] = useState(null);
+  const [subName, setSubName] = useState('');
+  const [subPlanType, setSubPlanType] = useState('free'); // "free", "monthly", "yearly"
+  const [subPrice, setSubPrice] = useState(0.0);
+  const [subBillingPeriod, setSubBillingPeriod] = useState('forever'); // "forever", "month", "year"
+  const [subDescription, setSubDescription] = useState('');
+  const [subFeatures, setSubFeatures] = useState(['', '', '', '']);
+  const [subBadge, setSubBadge] = useState('');
+  const [subCta, setSubCta] = useState('Start Free');
+  const [subFeatured, setSubFeatured] = useState(false);
+
   const headers = { Authorization: `Bearer ${token}` };
 
   const loadData = () => {
@@ -919,13 +933,15 @@ function AdminPanel({ token }) {
       axios.get(`${API_BASE}/admin/users`, { headers }),
       axios.get(`${API_BASE}/courses`),
       axios.get(`${API_BASE}/blog/admin/all`, { headers }),
-      axios.get(`${API_BASE}/about`)
+      axios.get(`${API_BASE}/about`),
+      axios.get(`${API_BASE}/subscriptions`)
     ])
-    .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes]) => {
+    .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes, subRes]) => {
       setStats(statsRes.data);
       setUsersList(usersRes.data);
       setCoursesList(coursesRes.data);
       setBlogPostsList(blogRes.data);
+      setSubscriptionsList(subRes.data);
       if (aboutRes.data) {
         setAboutTitle(aboutRes.data.title || 'About Gordon IT Academy');
         setAboutSubTitle(aboutRes.data.subTitle || 'About');
@@ -943,6 +959,84 @@ function AdminPanel({ token }) {
       setError('Failed to fetch administrative data');
       setLoading(false);
     });
+  };
+
+  const handleSaveSubscriptionPlan = (e) => {
+    e.preventDefault();
+    const payload = {
+      name: subName,
+      planType: subPlanType,
+      price: parseFloat(subPrice),
+      billingPeriod: subBillingPeriod,
+      description: subDescription,
+      features: subFeatures.filter(f => f.trim() !== ''),
+      badge: subBadge || null,
+      cta: subCta,
+      featured: subFeatured
+    };
+
+    const request = editSubscriptionId
+      ? axios.put(`${API_BASE}/subscriptions/${editSubscriptionId}`, payload, { headers })
+      : axios.post(`${API_BASE}/subscriptions`, payload, { headers });
+
+    request
+      .then(() => {
+        alert(editSubscriptionId ? 'Subscription plan updated successfully!' : 'Subscription plan created successfully!');
+        setIsSubscriptionModalOpen(false);
+        resetSubscriptionForm();
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Error saving subscription plan'));
+  };
+
+  const handleDeleteSubscriptionPlan = (planId) => {
+    if (planId.startsWith('default-')) {
+      alert('Cannot delete default system templates!');
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this subscription plan?')) {
+      axios.delete(`${API_BASE}/subscriptions/${planId}`, { headers })
+        .then(() => {
+          alert('Subscription plan deleted successfully!');
+          loadData();
+        })
+        .catch(err => alert('Failed to delete subscription plan'));
+    }
+  };
+
+  const openSubscriptionModal = (plan = null) => {
+    if (plan) {
+      if (plan.id && plan.id.startsWith('default-')) {
+        alert('Default plans are system templates and cannot be edited. Please create a new custom plan instead.');
+        return;
+      }
+      setEditSubscriptionId(plan.id);
+      setSubName(plan.name);
+      setSubPlanType(plan.planType);
+      setSubPrice(plan.price);
+      setSubBillingPeriod(plan.billingPeriod);
+      setSubDescription(plan.description);
+      setSubFeatures(plan.features || ['', '', '', '']);
+      setSubBadge(plan.badge || '');
+      setSubCta(plan.cta);
+      setSubFeatured(plan.featured);
+    } else {
+      resetSubscriptionForm();
+    }
+    setIsSubscriptionModalOpen(true);
+  };
+
+  const resetSubscriptionForm = () => {
+    setEditSubscriptionId(null);
+    setSubName('');
+    setSubPlanType('free');
+    setSubPrice(0.0);
+    setSubBillingPeriod('forever');
+    setSubDescription('');
+    setSubFeatures(['', '', '', '']);
+    setSubBadge('');
+    setSubCta('Start Free');
+    setSubFeatured(false);
   };
 
   const handleSaveAboutContent = (e) => {
@@ -1266,6 +1360,13 @@ function AdminPanel({ token }) {
         >
           About Settings
           {activeTab === 'about' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('subscriptions')} 
+          className={`pb-4 transition relative ${activeTab === 'subscriptions' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Subscription Plans
+          {activeTab === 'subscriptions' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -2156,6 +2257,246 @@ function AdminPanel({ token }) {
             Save About Settings
           </button>
         </form>
+      )}
+
+      {/* 7. SUBSCRIPTIONS MANAGEMENT TAB */}
+      {activeTab === 'subscriptions' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Subscription Plans</h2>
+            <button 
+              onClick={() => openSubscriptionModal()} 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Pricing Plan</span>
+            </button>
+          </div>
+
+          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-xs font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Plan Name</th>
+                  <th className="px-6 py-4">Type</th>
+                  <th className="px-6 py-4">Price</th>
+                  <th className="px-6 py-4">Billing Period</th>
+                  <th className="px-6 py-4">Badge</th>
+                  <th className="px-6 py-4">Featured</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900 text-slate-300">
+                {subscriptionsList.map((plan) => (
+                  <tr key={plan.id} className="hover:bg-slate-900/20 transition">
+                    <td className="px-6 py-4 font-bold text-slate-100">
+                      {plan.name}
+                      {plan.id.startsWith('default-') && (
+                        <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">SYSTEM</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="badge badge-blue">{plan.planType}</span>
+                    </td>
+                    <td className="px-6 py-4 font-black text-white">${plan.price}</td>
+                    <td className="px-6 py-4 text-xs text-slate-400">{plan.billingPeriod}</td>
+                    <td className="px-6 py-4 text-xs">
+                      {plan.badge ? (
+                        <span className="badge badge-green">{plan.badge}</span>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        plan.featured 
+                          ? 'bg-blue-950/20 text-blue-400 border border-blue-500/20' 
+                          : 'bg-slate-800/40 text-slate-500 border border-slate-700/20'
+                      }`}>
+                        {plan.featured ? 'YES' : 'NO'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button 
+                        onClick={() => openSubscriptionModal(plan)}
+                        disabled={plan.id.startsWith('default-')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                          plan.id.startsWith('default-')
+                            ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteSubscriptionPlan(plan.id)}
+                        disabled={plan.id.startsWith('default-')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                          plan.id.startsWith('default-')
+                            ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                            : 'bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20'
+                        }`}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Plan Modal */}
+      {isSubscriptionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setIsSubscriptionModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+              <X className="h-6 w-6" />
+            </button>
+
+            <h2 className="text-xl font-bold border-b border-slate-900 pb-3">
+              {editSubscriptionId ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
+            </h2>
+
+            <form onSubmit={handleSaveSubscriptionPlan} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Plan Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={subName}
+                    onChange={e => setSubName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. Premium Pro Monthly"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Plan Type</label>
+                  <select 
+                    value={subPlanType}
+                    onChange={e => setSubPlanType(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  >
+                    <option value="free">free</option>
+                    <option value="monthly">monthly</option>
+                    <option value="yearly">yearly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Price ($)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    required 
+                    value={subPrice}
+                    onChange={e => setSubPrice(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Billing Period</label>
+                  <select 
+                    value={subBillingPeriod}
+                    onChange={e => setSubBillingPeriod(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  >
+                    <option value="forever">forever</option>
+                    <option value="month">month</option>
+                    <option value="year">year</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Badge Label (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={subBadge}
+                    onChange={e => setSubBadge(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. Most Popular"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">CTA Button Text</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={subCta}
+                    onChange={e => setSubCta(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                    placeholder="e.g. Upgrade Now"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Plan Description</label>
+                <textarea 
+                  rows="2" 
+                  required 
+                  value={subDescription}
+                  onChange={e => setSubDescription(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                  placeholder="Short description of this pricing plan..."
+                ></textarea>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-semibold text-slate-400">Features List (Up to 4)</label>
+                {[0, 1, 2, 3].map((idx) => (
+                  <input 
+                    key={idx}
+                    type="text"
+                    value={subFeatures[idx] || ''}
+                    onChange={e => {
+                      const updated = [...subFeatures];
+                      updated[idx] = e.target.value;
+                      setSubFeatures(updated);
+                    }}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-2.5 text-slate-100 outline-none text-sm"
+                    placeholder={`Feature highlight #${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center space-x-2 py-1">
+                <input 
+                  type="checkbox" 
+                  id="subFeatured" 
+                  checked={subFeatured}
+                  onChange={e => setSubFeatured(e.target.checked)}
+                  className="rounded border-slate-800 bg-slate-900 text-blue-500 focus:ring-blue-500 h-4 w-4"
+                />
+                <label htmlFor="subFeatured" className="text-sm font-semibold text-slate-300">Feature this plan (Glow border & primary CTA style)</label>
+              </div>
+
+              <div className="flex space-x-4 pt-2">
+                <button 
+                  type="submit"
+                  className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
+                >
+                  Save Subscription Plan
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setIsSubscriptionModalOpen(false)}
+                  className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
