@@ -898,6 +898,17 @@ function AdminPanel({ token }) {
   const [blogReadTime, setBlogReadTime] = useState('5 min read');
   const [blogPublished, setBlogPublished] = useState(false);
 
+  // About Section Management state
+  const [aboutTitle, setAboutTitle] = useState('About Gordon IT Academy');
+  const [aboutSubTitle, setAboutSubTitle] = useState('About');
+  const [aboutParagraphs, setAboutParagraphs] = useState(['', '', '']);
+  const [aboutStats, setAboutStats] = useState([
+    { icon: 'Award', label: '', sub: '' },
+    { icon: 'Users', label: '', sub: '' },
+    { icon: 'Target', label: '', sub: '' },
+    { icon: 'BookOpen', label: '', sub: '' }
+  ]);
+
   const headers = { Authorization: `Bearer ${token}` };
 
   const loadData = () => {
@@ -907,19 +918,60 @@ function AdminPanel({ token }) {
       axios.get(`${API_BASE}/admin/stats`, { headers }),
       axios.get(`${API_BASE}/admin/users`, { headers }),
       axios.get(`${API_BASE}/courses`),
-      axios.get(`${API_BASE}/blog/admin/all`, { headers })
+      axios.get(`${API_BASE}/blog/admin/all`, { headers }),
+      axios.get(`${API_BASE}/about`)
     ])
-    .then(([statsRes, usersRes, coursesRes, blogRes]) => {
+    .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes]) => {
       setStats(statsRes.data);
       setUsersList(usersRes.data);
       setCoursesList(coursesRes.data);
       setBlogPostsList(blogRes.data);
+      if (aboutRes.data) {
+        setAboutTitle(aboutRes.data.title || 'About Gordon IT Academy');
+        setAboutSubTitle(aboutRes.data.subTitle || 'About');
+        setAboutParagraphs(aboutRes.data.paragraphs || ['', '', '']);
+        setAboutStats(aboutRes.data.stats || [
+          { icon: 'Award', label: '', sub: '' },
+          { icon: 'Users', label: '', sub: '' },
+          { icon: 'Target', label: '', sub: '' },
+          { icon: 'BookOpen', label: '', sub: '' }
+        ]);
+      }
       setLoading(false);
     })
     .catch(err => {
       setError('Failed to fetch administrative data');
       setLoading(false);
     });
+  };
+
+  const handleSaveAboutContent = (e) => {
+    e.preventDefault();
+    const payload = {
+      title: aboutTitle,
+      subTitle: aboutSubTitle,
+      paragraphs: aboutParagraphs.filter(p => p.trim() !== ''),
+      stats: aboutStats
+    };
+
+    axios.post(`${API_BASE}/about`, payload, { headers })
+      .then(() => {
+        alert('About section updated successfully!');
+        loadData();
+      })
+      .catch(err => alert(err.response?.data?.detail || 'Failed to update about section'));
+  };
+
+  const handleParagraphChange = (index, value) => {
+    const updated = [...aboutParagraphs];
+    updated[index] = value;
+    setAboutParagraphs(updated);
+  };
+
+  const handleStatChange = (index, field, value) => {
+    const updated = [...aboutStats];
+    updated[index] = { ...updated[index], [field]: value };
+    setAboutStats(updated);
   };
 
   useEffect(() => {
@@ -1207,6 +1259,13 @@ function AdminPanel({ token }) {
         >
           Blog Posts
           {activeTab === 'blog' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('about')} 
+          className={`pb-4 transition relative ${activeTab === 'about' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          About Settings
+          {activeTab === 'about' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -2004,6 +2063,99 @@ function AdminPanel({ token }) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 6. ABOUT PAGE SETTINGS TAB */}
+      {activeTab === 'about' && (
+        <form onSubmit={handleSaveAboutContent} className="glass-panel p-8 rounded-3xl space-y-6 max-w-3xl mx-auto animate-fade-in">
+          <h2 className="text-xl font-bold border-b border-slate-900 pb-3">About Page Settings</h2>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-400">Section Subtitle Badge</label>
+              <input 
+                type="text" 
+                required 
+                value={aboutSubTitle}
+                onChange={e => setAboutSubTitle(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                placeholder="e.g. About"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-400">Section Heading Title</label>
+              <input 
+                type="text" 
+                required 
+                value={aboutTitle}
+                onChange={e => setAboutTitle(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                placeholder="e.g. About Gordon IT Academy"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-400 border-b border-slate-900 pb-2">Description Paragraphs</h3>
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500">Paragraph {idx + 1}</label>
+                <textarea 
+                  rows="3" 
+                  value={aboutParagraphs[idx] || ''}
+                  onChange={e => handleParagraphChange(idx, e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                  placeholder={`Write description paragraph {idx + 1}...`}
+                ></textarea>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-400 border-b border-slate-900 pb-2">Statistics & Highlights</h3>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {aboutStats.map((stat, idx) => (
+                <div key={idx} className="p-4 bg-slate-900/40 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                    <span className="text-xs font-bold text-blue-400">Card #{idx + 1}</span>
+                    <select 
+                      value={stat.icon || 'Award'}
+                      onChange={e => handleStatChange(idx, 'icon', e.target.value)}
+                      className="bg-slate-900 border border-slate-850 focus:border-blue-500 text-xs font-semibold rounded-lg px-2 py-1 text-slate-300 outline-none"
+                    >
+                      <option>Award</option>
+                      <option>Users</option>
+                      <option>Target</option>
+                      <option>BookOpen</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <input 
+                      type="text" 
+                      required 
+                      value={stat.label || ''}
+                      onChange={e => handleStatChange(idx, 'label', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-lg px-3 py-1.5 text-white outline-none text-xs"
+                      placeholder="Title (e.g. Cisco CCIE Certified)"
+                    />
+                    <input 
+                      type="text" 
+                      required 
+                      value={stat.sub || ''}
+                      onChange={e => handleStatChange(idx, 'sub', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-lg px-3 py-1.5 text-slate-300 outline-none text-xs"
+                      placeholder="Subtitle (e.g. Enterprise Infrastructure)"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button type="submit" className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm">
+            Save About Settings
+          </button>
+        </form>
       )}
     </div>
   );
