@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Shield, BookOpen, Key, Server, Check, ArrowRight, X, Mail, User, Info, FileText, Play, CheckSquare, Award, Clock, AlertTriangle, LogOut, Lock, Plus } from 'lucide-react';
 import axios from 'axios';
+import InterviewPrep from './components/InterviewPrep';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
 const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'http://localhost:3000';
 const DASHBOARD_URL = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -112,6 +113,10 @@ function MainWrapper() {
               <Award className="h-4 w-4 text-blue-400" />
               <span>Practice Exam Portal</span>
             </Link>
+            <Link to="/interview-prep" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 hover:text-white transition">
+              <CheckSquare className="h-4 w-4 text-blue-400" />
+              <span>Interview Prep</span>
+            </Link>
 
             {user && user.membership_level === 'free' && (
               <Link to="/upgrade" className="flex items-center space-x-3 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-900/40 hover:text-indigo-200 transition">
@@ -158,6 +163,7 @@ function MainWrapper() {
           <Route path="/courses/:courseId" element={<CourseViewer token={token} user={user} />} />
           <Route path="/exams" element={<ExamSelection token={token} user={user} />} />
           <Route path="/exams/quiz" element={<QuizEngine token={token} user={user} />} />
+          <Route path="/interview-prep" element={<InterviewPrep token={token} user={user} />} />
           <Route path="/upgrade" element={<UpgradePortal token={token} />} />
           <Route path="/admin" element={<AdminPanel token={token} />} />
         </Routes>
