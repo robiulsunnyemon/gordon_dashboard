@@ -34,7 +34,7 @@ function MainWrapper() {
         localStorage.setItem('gordon_student_membership', urlMembership);
       }
       setToken(urlToken);
-      
+
       // Clear URL params
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -45,18 +45,18 @@ function MainWrapper() {
       axios.get(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      .then(res => {
-        setUser(res.data);
-        if (res.data.email === 'admin@gordon.com') {
-          localStorage.setItem('gordon_admin_membership', res.data.membership_level);
-        } else {
-          localStorage.setItem('gordon_student_membership', res.data.membership_level);
-        }
-      })
-      .catch(err => {
-        console.error("Session expired:", err);
-        handleSignOut();
-      });
+        .then(res => {
+          setUser(res.data);
+          if (res.data.email === 'admin@gordon.com') {
+            localStorage.setItem('gordon_admin_membership', res.data.membership_level);
+          } else {
+            localStorage.setItem('gordon_student_membership', res.data.membership_level);
+          }
+        })
+        .catch(err => {
+          console.error("Session expired:", err);
+          handleSignOut();
+        });
     }
   }, [token]);
 
@@ -84,16 +84,15 @@ function MainWrapper() {
             <Shield className="h-8 w-8 text-blue-500" />
             <span className="font-extrabold text-lg tracking-wider text-gradient">LEARNER PORTAL</span>
           </div>
-          
+
           {user && (
             <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-1.5">
               <p className="text-xs text-slate-500 font-semibold truncate">{user.email}</p>
               <div className="flex items-center space-x-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  user.membership_level === 'premium' 
-                    ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' 
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${user.membership_level === 'premium'
+                    ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30'
                     : 'bg-slate-800 text-slate-400 border-slate-700'
-                }`}>
+                  }`}>
                   {user.membership_level.toUpperCase()} MEMBER
                 </span>
               </div>
@@ -113,7 +112,7 @@ function MainWrapper() {
               <Award className="h-4 w-4 text-blue-400" />
               <span>Practice Exam Portal</span>
             </Link>
-            
+
             {user && user.membership_level === 'free' && (
               <Link to="/upgrade" className="flex items-center space-x-3 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-900/40 hover:text-indigo-200 transition">
                 <Shield className="h-4 w-4 text-indigo-400" />
@@ -132,7 +131,7 @@ function MainWrapper() {
 
         <div className="p-6">
           {token ? (
-            <button 
+            <button
               onClick={handleSignOut}
               className="w-full flex items-center justify-center space-x-3 p-3 rounded-xl bg-slate-900 hover:bg-red-950/20 hover:text-red-400 border border-slate-800 transition text-sm font-bold text-slate-400"
             >
@@ -140,7 +139,7 @@ function MainWrapper() {
               <span>Sign Out</span>
             </button>
           ) : (
-            <a 
+            <a
               href={LANDING_URL}
               className="w-full flex items-center justify-center space-x-3 p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition text-sm"
             >
@@ -177,8 +176,8 @@ function DashboardHome({ user, token }) {
       axios.get(`${API_BASE}/exams/attempts`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      .then(res => setAttempts(res.data))
-      .catch(err => console.error(err));
+        .then(res => setAttempts(res.data))
+        .catch(err => console.error(err));
     }
   }, [token]);
 
@@ -199,7 +198,7 @@ function DashboardHome({ user, token }) {
               Explore your course list including detailed routing lectures and download centers for network configuration guides.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/courses')}
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition flex items-center justify-center space-x-2 text-sm"
           >
@@ -217,7 +216,7 @@ function DashboardHome({ user, token }) {
               Prepare for your CCNA or CCNP certs using our simulator. (First 40 questions are open to free tier).
             </p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/exams')}
             className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition flex items-center justify-center space-x-2 text-sm"
           >
@@ -249,9 +248,8 @@ function DashboardHome({ user, token }) {
                       <td className="px-6 py-4">{new Date(attempt.completedAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4 font-bold">{attempt.score}%</td>
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          attempt.passed ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
-                        }`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${attempt.passed ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                          }`}>
                           {attempt.passed ? 'PASSED' : 'FAILED'}
                         </span>
                       </td>
@@ -293,7 +291,7 @@ function CoursesList() {
                 <h3 className="text-xl font-bold pt-2">{course.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{course.description}</p>
               </div>
-              <button 
+              <button
                 onClick={() => navigate(`/courses/${course.id}`)}
                 className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition text-sm flex items-center justify-center space-x-2"
               >
@@ -339,15 +337,15 @@ function CourseViewer({ token, user }) {
     }, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    .then(() => {
-      // Refresh course progress states
-      axios.get(`${API_BASE}/courses/${resolvedCourseId}?user_token=${token}`)
-        .then(res => {
-          setCourse(res.data);
-          const updatedLesson = res.data.lessons.find(l => l.id === lessonId);
-          if (updatedLesson) setSelectedLesson(updatedLesson);
-        });
-    });
+      .then(() => {
+        // Refresh course progress states
+        axios.get(`${API_BASE}/courses/${resolvedCourseId}?user_token=${token}`)
+          .then(res => {
+            setCourse(res.data);
+            const updatedLesson = res.data.lessons.find(l => l.id === lessonId);
+            if (updatedLesson) setSelectedLesson(updatedLesson);
+          });
+      });
   };
 
   if (error) return <div className="text-red-400">{error}</div>;
@@ -393,13 +391,12 @@ function CourseViewer({ token, user }) {
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-bold">{selectedLesson.title}</h2>
                   {token && !selectedLesson.isLocked && (
-                    <button 
+                    <button
                       onClick={() => handleProgressToggle(selectedLesson.id, selectedLesson.completed)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition border ${
-                        selectedLesson.completed 
-                          ? 'bg-green-950/30 text-green-400 border-green-500/30' 
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition border ${selectedLesson.completed
+                          ? 'bg-green-950/30 text-green-400 border-green-500/30'
                           : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
-                      }`}
+                        }`}
                     >
                       <CheckSquare className="h-4 w-4" />
                       <span>{selectedLesson.completed ? 'Completed' : 'Mark Complete'}</span>
@@ -426,11 +423,10 @@ function CourseViewer({ token, user }) {
               <button
                 key={lesson.id}
                 onClick={() => setSelectedLesson(lesson)}
-                className={`w-full text-left p-3.5 rounded-2xl transition flex items-center justify-between text-sm ${
-                  selectedLesson?.id === lesson.id 
-                    ? 'bg-blue-600 text-white font-bold' 
+                className={`w-full text-left p-3.5 rounded-2xl transition flex items-center justify-between text-sm ${selectedLesson?.id === lesson.id
+                    ? 'bg-blue-600 text-white font-bold'
                     : 'bg-slate-900/50 hover:bg-slate-900 text-slate-300'
-                }`}
+                  }`}
               >
                 <div className="flex items-center space-x-3 truncate">
                   {lesson.isLocked ? (
@@ -473,7 +469,7 @@ function ExamSelection() {
               Test your knowledge on IP routing, subnetting, switching, IPv6 configurations, and basic network automation.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/exams/quiz?category=CCNA')}
             className="mt-6 w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition flex items-center justify-center space-x-2 text-sm"
           >
@@ -492,7 +488,7 @@ function ExamSelection() {
               Advanced questions targeting routing attributes (OSPF, BGP), SD-WAN models, and complex troubleshooting.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/exams/quiz?category=CCNP')}
             className="mt-6 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition flex items-center justify-center space-x-2 text-sm"
           >
@@ -551,7 +547,7 @@ function QuizEngine({ token, user }) {
 
   const handleNextQuestion = () => {
     const nextIdx = currentIdx + 1;
-    
+
     // Check if next question exists
     if (nextIdx >= questions.length) {
       handleFinishQuiz();
@@ -577,7 +573,7 @@ function QuizEngine({ token, user }) {
       // Calculate grade
       const finalScorePct = Math.round((score / questions.filter(q => !q.isLocked).length) * 100);
       const passed = finalScorePct >= 70;
-      
+
       axios.post(`${API_BASE}/exams/attempts`, {
         score: finalScorePct,
         passed: passed
@@ -624,7 +620,7 @@ function QuizEngine({ token, user }) {
               const optionChar = String.fromCharCode(65 + idx); // 'A', 'B', 'C', 'D'
               const isSelected = selectedOption === optionChar;
               const isCorrectOption = currentQuestion.correctOption === optionChar;
-              
+
               let optionClass = "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-900/80 hover:border-slate-700";
               if (isSelected && !isAnswerChecked) {
                 optionClass = "bg-blue-900/20 border-blue-500 text-blue-300";
@@ -695,7 +691,7 @@ function QuizEngine({ token, user }) {
           <p className="text-xs text-slate-500">
             Correct Answers: {score} out of {questions.filter(q => !q.isLocked).length} graded questions
           </p>
-          <button 
+          <button
             onClick={() => navigate('/')}
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-sm"
           >
@@ -718,7 +714,7 @@ function QuizEngine({ token, user }) {
                 You have solved the first 40 free practice questions! Subscribe to Premium to unlock all 50+ certification questions and complete solutions.
               </p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/upgrade')}
               className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition text-sm flex items-center justify-center space-x-2"
             >
@@ -747,14 +743,14 @@ function UpgradePortal({ token }) {
     }, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    .then(res => {
-      // Redirect to Stripe checkout URL
-      window.location.href = res.data.checkout_url;
-    })
-    .catch(err => {
-      setError(err.response?.data?.detail || 'Stripe Checkout generation failed');
-      setLoading(false);
-    });
+      .then(res => {
+        // Redirect to Stripe checkout URL
+        window.location.href = res.data.checkout_url;
+      })
+      .catch(err => {
+        setError(err.response?.data?.detail || 'Stripe Checkout generation failed');
+        setLoading(false);
+      });
   };
 
   // Check if redirect contains success session_id
@@ -933,6 +929,14 @@ function AdminPanel({ token }) {
   const [testRating, setTestRating] = useState(5);
   const [testText, setTestText] = useState('');
 
+  // Interview Questions state
+  const [interviewsList, setInterviewsList] = useState([]);
+  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+  const [editInterviewId, setEditInterviewId] = useState(null);
+  const [interviewTopic, setInterviewTopic] = useState('');
+  const [interviewQuestionText, setInterviewQuestionText] = useState('');
+  const [interviewCorrectAnswer, setInterviewCorrectAnswer] = useState('');
+
   const headers = { Authorization: `Bearer ${token}` };
 
   const loadData = () => {
@@ -945,32 +949,34 @@ function AdminPanel({ token }) {
       axios.get(`${API_BASE}/blog/admin/all`, { headers }),
       axios.get(`${API_BASE}/about`),
       axios.get(`${API_BASE}/subscriptions`),
-      axios.get(`${API_BASE}/testimonials`)
+      axios.get(`${API_BASE}/testimonials`),
+      axios.get(`${API_BASE}/interviews`)
     ])
-    .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes, subRes, testRes]) => {
-      setStats(statsRes.data);
-      setUsersList(usersRes.data);
-      setCoursesList(coursesRes.data);
-      setBlogPostsList(blogRes.data);
-      setSubscriptionsList(subRes.data);
-      setTestimonialsList(testRes.data);
-      if (aboutRes.data) {
-        setAboutTitle(aboutRes.data.title || 'About Gordon IT Academy');
-        setAboutSubTitle(aboutRes.data.subTitle || 'About');
-        setAboutParagraphs(aboutRes.data.paragraphs || ['', '', '']);
-        setAboutStats(aboutRes.data.stats || [
-          { icon: 'Award', label: '', sub: '' },
-          { icon: 'Users', label: '', sub: '' },
-          { icon: 'Target', label: '', sub: '' },
-          { icon: 'BookOpen', label: '', sub: '' }
-        ]);
-      }
-      setLoading(false);
-    })
-    .catch(err => {
-      setError('Failed to fetch administrative data');
-      setLoading(false);
-    });
+      .then(([statsRes, usersRes, coursesRes, blogRes, aboutRes, subRes, testRes, intRes]) => {
+        setStats(statsRes.data);
+        setUsersList(usersRes.data);
+        setCoursesList(coursesRes.data);
+        setBlogPostsList(blogRes.data);
+        setSubscriptionsList(subRes.data);
+        setTestimonialsList(testRes.data);
+        setInterviewsList(intRes.data);
+        if (aboutRes.data) {
+          setAboutTitle(aboutRes.data.title || 'About Gordon IT Academy');
+          setAboutSubTitle(aboutRes.data.subTitle || 'About');
+          setAboutParagraphs(aboutRes.data.paragraphs || ['', '', '']);
+          setAboutStats(aboutRes.data.stats || [
+            { icon: 'Award', label: '', sub: '' },
+            { icon: 'Users', label: '', sub: '' },
+            { icon: 'Target', label: '', sub: '' },
+            { icon: 'BookOpen', label: '', sub: '' }
+          ]);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to fetch administrative data');
+        setLoading(false);
+      });
   };
 
   const handleSaveTestimonial = (e) => {
@@ -1037,6 +1043,58 @@ function AdminPanel({ token }) {
     setTestCompany('');
     setTestRating(5);
     setTestText('');
+  };
+
+  const handleSaveInterview = (e) => {
+    e.preventDefault();
+    const payload = {
+      topic: interviewTopic,
+      questionText: interviewQuestionText,
+      correctAnswer: interviewCorrectAnswer
+    };
+
+    const request = editInterviewId
+      ? axios.put(`${API_BASE}/interviews/${editInterviewId}`, payload, { headers })
+      : axios.post(`${API_BASE}/interviews`, payload, { headers });
+
+    request
+      .then(() => {
+        alert(editInterviewId ? 'Interview Question updated!' : 'Interview Question added!');
+        setIsInterviewModalOpen(false);
+        resetInterviewForm();
+        loadData();
+      })
+      .catch(err => alert('Failed to save interview question'));
+  };
+
+  const handleDeleteInterview = (qId) => {
+    if (window.confirm('Are you sure you want to delete this interview question?')) {
+      axios.delete(`${API_BASE}/interviews/${qId}`, { headers })
+        .then(() => {
+          alert('Interview Question deleted successfully!');
+          loadData();
+        })
+        .catch(err => alert('Failed to delete question'));
+    }
+  };
+
+  const openInterviewModal = (q = null) => {
+    if (q) {
+      setEditInterviewId(q.id);
+      setInterviewTopic(q.topic);
+      setInterviewQuestionText(q.questionText);
+      setInterviewCorrectAnswer(q.correctAnswer);
+    } else {
+      resetInterviewForm();
+    }
+    setIsInterviewModalOpen(true);
+  };
+
+  const resetInterviewForm = () => {
+    setEditInterviewId(null);
+    setInterviewTopic('');
+    setInterviewQuestionText('');
+    setInterviewCorrectAnswer('');
   };
 
   const handleSaveSubscriptionPlan = (e) => {
@@ -1236,7 +1294,7 @@ function AdminPanel({ token }) {
       difficulty: courseDiff
     };
 
-    const request = editCourseId 
+    const request = editCourseId
       ? axios.put(`${API_BASE}/courses/${editCourseId}`, payload, { headers })
       : axios.post(`${API_BASE}/courses`, payload, { headers });
 
@@ -1397,61 +1455,68 @@ function AdminPanel({ token }) {
 
       {/* Tab Navigation */}
       <div className="flex border-b border-slate-800 space-x-8 text-sm font-bold text-slate-400">
-        <button 
-          onClick={() => setActiveTab('overview')} 
+        <button
+          onClick={() => setActiveTab('overview')}
           className={`pb-4 transition relative ${activeTab === 'overview' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Overview & Charts
           {activeTab === 'overview' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('courses')} 
+        <button
+          onClick={() => setActiveTab('courses')}
           className={`pb-4 transition relative ${activeTab === 'courses' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Courses & Lessons CRUD
           {activeTab === 'courses' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('users')} 
+        <button
+          onClick={() => setActiveTab('users')}
           className={`pb-4 transition relative ${activeTab === 'users' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Users & Enrollments
           {activeTab === 'users' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('questions')} 
+        <button
+          onClick={() => setActiveTab('questions')}
           className={`pb-4 transition relative ${activeTab === 'questions' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Create Quiz Question
           {activeTab === 'questions' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('blog')} 
+        <button
+          onClick={() => setActiveTab('blog')}
           className={`pb-4 transition relative ${activeTab === 'blog' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Blog Posts
           {activeTab === 'blog' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('about')} 
+        <button
+          onClick={() => setActiveTab('about')}
           className={`pb-4 transition relative ${activeTab === 'about' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           About Settings
           {activeTab === 'about' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('subscriptions')} 
+        <button
+          onClick={() => setActiveTab('subscriptions')}
           className={`pb-4 transition relative ${activeTab === 'subscriptions' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Subscription Plans
           {activeTab === 'subscriptions' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
-        <button 
-          onClick={() => setActiveTab('testimonials')} 
+        <button
+          onClick={() => setActiveTab('testimonials')}
           className={`pb-4 transition relative ${activeTab === 'testimonials' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
         >
           Testimonials
           {activeTab === 'testimonials' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
+        </button>
+        <button
+          onClick={() => setActiveTab('interviews')}
+          className={`pb-4 transition relative ${activeTab === 'interviews' ? 'text-white font-extrabold' : 'hover:text-slate-200'}`}
+        >
+          Interview Prep
+          {activeTab === 'interviews' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -1485,7 +1550,7 @@ function AdminPanel({ token }) {
           {/* Filtering Header for charts */}
           <div className="flex items-center justify-between border-b border-slate-900 pb-4">
             <h2 className="text-lg font-bold">Trend Analytics</h2>
-            <select 
+            <select
               value={timeFilter}
               onChange={e => setTimeFilter(e.target.value)}
               className="bg-slate-900 border border-slate-800 focus:border-blue-500 text-xs font-semibold rounded-xl px-3 py-2 text-slate-300 outline-none"
@@ -1508,34 +1573,34 @@ function AdminPanel({ token }) {
                     const revenues = Object.values(stats.revenue_growth);
                     const maxRevenue = Math.max(...revenues, 100);
                     const xStep = 340 / (months.length - 1 || 1);
-                    
+
                     // Generate points
                     const points = revenues.map((r, i) => ({
                       x: 80 + i * xStep,
                       y: 180 - (r / maxRevenue) * 120
                     }));
-                    
+
                     const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
                     const areaD = pathD + ` L ${points[points.length - 1].x},180 L 80,180 Z`;
-                    
+
                     return (
                       <svg className="w-full h-full" viewBox="0 0 450 210">
                         <defs>
                           <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.3"/>
-                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0"/>
+                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
                         {/* Grid Lines */}
-                        <line x1="80" y1="180" x2="420" y2="180" stroke="#1e293b" strokeWidth="1"/>
-                        <line x1="80" y1="120" x2="420" y2="120" stroke="#0f172a" strokeWidth="1"/>
-                        <line x1="80" y1="60" x2="420" y2="60" stroke="#0f172a" strokeWidth="1"/>
-                        
+                        <line x1="80" y1="180" x2="420" y2="180" stroke="#1e293b" strokeWidth="1" />
+                        <line x1="80" y1="120" x2="420" y2="120" stroke="#0f172a" strokeWidth="1" />
+                        <line x1="80" y1="60" x2="420" y2="60" stroke="#0f172a" strokeWidth="1" />
+
                         {/* Area Fill */}
                         <path d={areaD} fill="url(#chartGradient)" />
                         {/* Line */}
                         <path d={pathD} fill="none" stroke="#10B981" strokeWidth="3" />
-                        
+
                         {/* Points */}
                         {points.map((p, idx) => (
                           <g key={idx}>
@@ -1563,29 +1628,29 @@ function AdminPanel({ token }) {
                     const usersVal = Object.values(stats.user_growth);
                     const maxUsers = Math.max(...usersVal, 10);
                     const xStep = 340 / months.length;
-                    
+
                     return (
                       <svg className="w-full h-full" viewBox="0 0 450 210">
                         {/* Grid Lines */}
-                        <line x1="80" y1="180" x2="420" y2="180" stroke="#1e293b" strokeWidth="1"/>
-                        <line x1="80" y1="120" x2="420" y2="120" stroke="#0f172a" strokeWidth="1"/>
-                        <line x1="80" y1="60" x2="420" y2="60" stroke="#0f172a" strokeWidth="1"/>
-                        
+                        <line x1="80" y1="180" x2="420" y2="180" stroke="#1e293b" strokeWidth="1" />
+                        <line x1="80" y1="120" x2="420" y2="120" stroke="#0f172a" strokeWidth="1" />
+                        <line x1="80" y1="60" x2="420" y2="60" stroke="#0f172a" strokeWidth="1" />
+
                         {/* Bars */}
                         {usersVal.map((val, idx) => {
                           const barWidth = 24;
                           const x = 90 + idx * xStep;
                           const height = (val / maxUsers) * 120;
                           const y = 180 - height;
-                          
+
                           return (
                             <g key={idx}>
-                              <rect 
-                                x={x - barWidth / 2} 
-                                y={y} 
-                                width={barWidth} 
-                                height={height} 
-                                fill="#3B82F6" 
+                              <rect
+                                x={x - barWidth / 2}
+                                y={y}
+                                width={barWidth}
+                                height={height}
+                                fill="#3B82F6"
                                 rx="3"
                                 className="transition hover:fill-blue-400"
                               />
@@ -1611,7 +1676,7 @@ function AdminPanel({ token }) {
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">Course Library</h2>
-            <button 
+            <button
               onClick={() => openCourseModal()}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-xs flex items-center space-x-2"
             >
@@ -1645,18 +1710,17 @@ function AdminPanel({ token }) {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          course.difficulty === 'Advanced' 
-                            ? 'bg-red-950/20 text-red-400 border-red-500/20' 
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${course.difficulty === 'Advanced'
+                            ? 'bg-red-950/20 text-red-400 border-red-500/20'
                             : course.difficulty === 'Intermediate'
-                            ? 'bg-amber-950/20 text-amber-400 border-amber-500/20'
-                            : 'bg-green-950/20 text-green-400 border-green-500/20'
-                        }`}>
+                              ? 'bg-amber-950/20 text-amber-400 border-amber-500/20'
+                              : 'bg-green-950/20 text-green-400 border-green-500/20'
+                          }`}>
                           {course.difficulty}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button 
+                        <button
                           onClick={() => toggleCourseExpand(course.id)}
                           className="text-xs text-blue-400 hover:text-blue-300 font-bold transition flex items-center space-x-1"
                         >
@@ -1665,13 +1729,13 @@ function AdminPanel({ token }) {
                         </button>
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        <button 
+                        <button
                           onClick={() => openCourseModal(course)}
                           className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold border border-slate-800 transition"
                         >
                           Edit
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteCourse(course.id)}
                           className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg text-xs font-semibold transition"
                         >
@@ -1679,7 +1743,7 @@ function AdminPanel({ token }) {
                         </button>
                       </td>
                     </tr>
-                    
+
                     {/* Expanded lessons section */}
                     {expandedCourses[course.id] && (
                       <tr>
@@ -1687,7 +1751,7 @@ function AdminPanel({ token }) {
                           <div className="space-y-4">
                             <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                               <h5 className="text-xs font-bold text-slate-400 tracking-wider">LESSON PLAYLIST FOR {course.title.toUpperCase()}</h5>
-                              <button 
+                              <button
                                 onClick={() => openLessonModal(course.id)}
                                 className="text-[11px] text-blue-400 hover:text-blue-300 font-bold transition flex items-center space-x-1"
                               >
@@ -1695,7 +1759,7 @@ function AdminPanel({ token }) {
                                 <span>Add Lesson</span>
                               </button>
                             </div>
-                            
+
                             {course.lessons && course.lessons.length > 0 ? (
                               <div className="space-y-2">
                                 {course.lessons.map((lesson) => (
@@ -1705,13 +1769,13 @@ function AdminPanel({ token }) {
                                       <span className="text-[10px] text-slate-500 block truncate max-w-lg">{lesson.videoUrl}</span>
                                     </div>
                                     <div className="space-x-2">
-                                      <button 
+                                      <button
                                         onClick={() => openLessonModal(course.id, lesson)}
                                         className="text-[10px] text-slate-400 hover:text-white transition"
                                       >
                                         Edit
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={() => handleDeleteLesson(lesson.id)}
                                         className="text-[10px] text-red-400 hover:text-red-300 transition"
                                       >
@@ -1738,21 +1802,21 @@ function AdminPanel({ token }) {
           {isCourseModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <form onSubmit={handleSaveCourse} className="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6 relative animate-fade-in">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsCourseModalOpen(false)}
                   className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
                 >
                   <X className="h-6 w-6" />
                 </button>
                 <h3 className="text-xl font-bold border-b border-slate-900 pb-3">{editCourseId ? 'Edit Course Details' : 'Create Course'}</h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Course Title</label>
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       value={courseTitle}
                       onChange={e => setCourseTitle(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1760,9 +1824,9 @@ function AdminPanel({ token }) {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Description</label>
-                    <textarea 
-                      rows="3" 
-                      required 
+                    <textarea
+                      rows="3"
+                      required
                       value={courseDesc}
                       onChange={e => setCourseDesc(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -1770,9 +1834,9 @@ function AdminPanel({ token }) {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Thumbnail URL</label>
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       value={courseThumb}
                       onChange={e => setCourseThumb(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1780,7 +1844,7 @@ function AdminPanel({ token }) {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Difficulty Level</label>
-                    <select 
+                    <select
                       value={courseDiff}
                       onChange={e => setCourseDiff(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1793,14 +1857,14 @@ function AdminPanel({ token }) {
                 </div>
 
                 <div className="flex space-x-4 pt-2">
-                  <button 
+                  <button
                     type="submit"
                     className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
                   >
                     Save Course
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setIsCourseModalOpen(false)}
                     className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
                   >
@@ -1815,22 +1879,22 @@ function AdminPanel({ token }) {
           {isLessonModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <form onSubmit={handleSaveLesson} className="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6 relative animate-fade-in">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsLessonModalOpen(false)}
                   className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
                 >
                   <X className="h-6 w-6" />
                 </button>
                 <h3 className="text-xl font-bold border-b border-slate-900 pb-3">{editLessonId ? 'Edit Lesson Parameters' : 'Add Lesson to Course'}</h3>
-                
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2 space-y-1">
                       <label className="text-xs font-semibold text-slate-400">Lesson Title</label>
-                      <input 
-                        type="text" 
-                        required 
+                      <input
+                        type="text"
+                        required
                         value={lessonTitle}
                         onChange={e => setLessonTitle(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1838,9 +1902,9 @@ function AdminPanel({ token }) {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-400">Order Index</label>
-                      <input 
-                        type="number" 
-                        required 
+                      <input
+                        type="number"
+                        required
                         value={lessonOrder}
                         onChange={e => setLessonOrder(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1849,9 +1913,9 @@ function AdminPanel({ token }) {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Cloudinary / Video Stream URL</label>
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       value={lessonVideo}
                       onChange={e => setLessonVideo(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1859,9 +1923,9 @@ function AdminPanel({ token }) {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Lesson Text / Study Guide</label>
-                    <textarea 
-                      rows="4" 
-                      required 
+                    <textarea
+                      rows="4"
+                      required
                       value={lessonText}
                       onChange={e => setLessonText(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -1870,14 +1934,14 @@ function AdminPanel({ token }) {
                 </div>
 
                 <div className="flex space-x-4 pt-2">
-                  <button 
+                  <button
                     type="submit"
                     className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
                   >
                     Save Lesson
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setIsLessonModalOpen(false)}
                     className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
                   >
@@ -1927,11 +1991,10 @@ function AdminPanel({ token }) {
                   <tr key={userItem.id} className="hover:bg-slate-900/20 transition">
                     <td className="px-6 py-4 font-bold text-slate-100">{userItem.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        userItem.membership_level === 'premium' 
-                          ? 'bg-indigo-950/20 text-indigo-400 border-indigo-500/20' 
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${userItem.membership_level === 'premium'
+                          ? 'bg-indigo-950/20 text-indigo-400 border-indigo-500/20'
                           : 'bg-slate-800/40 text-slate-400 border-slate-700/20'
-                      }`}>
+                        }`}>
                         {userItem.membership_level.toUpperCase()}
                       </span>
                     </td>
@@ -1957,11 +2020,11 @@ function AdminPanel({ token }) {
       {activeTab === 'questions' && (
         <form onSubmit={handleAddQuestion} className="glass-panel p-8 rounded-3xl space-y-6 max-w-2xl mx-auto animate-fade-in">
           <h2 className="text-xl font-bold border-b border-slate-900 pb-3">Create Quiz Question</h2>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-400">Exam Category</label>
-              <select 
+              <select
                 value={category}
                 onChange={e => setCategory(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -1974,21 +2037,21 @@ function AdminPanel({ token }) {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-400">Index Number</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 required
                 value={indexNumber}
                 onChange={e => setIndexNumber(parseInt(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm" 
+                className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-400">Question Text</label>
-            <textarea 
-              rows="3" 
-              required 
+            <textarea
+              rows="3"
+              required
               value={questionText}
               onChange={e => setQuestionText(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -2001,13 +2064,13 @@ function AdminPanel({ token }) {
             {options.map((opt, idx) => (
               <div key={idx} className="flex items-center space-x-3">
                 <span className="text-xs font-bold text-slate-500">{String.fromCharCode(65 + idx)}.</span>
-                <input 
-                  type="text" 
-                  required 
+                <input
+                  type="text"
+                  required
                   placeholder={`Option ${String.fromCharCode(65 + idx)}`}
                   value={opt}
                   onChange={e => handleOptionChange(idx, e.target.value)}
-                  className="flex-grow bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm" 
+                  className="flex-grow bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
                 />
               </div>
             ))}
@@ -2015,7 +2078,7 @@ function AdminPanel({ token }) {
 
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-400">Correct Option</label>
-            <select 
+            <select
               value={correctOption}
               onChange={e => setCorrectOption(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2029,9 +2092,9 @@ function AdminPanel({ token }) {
 
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-400">Answer Explanation</label>
-            <textarea 
-              rows="3" 
-              required 
+            <textarea
+              rows="3"
+              required
               value={explanation}
               onChange={e => setExplanation(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -2050,8 +2113,8 @@ function AdminPanel({ token }) {
         <div className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Blog Posts Management</h2>
-            <button 
-              onClick={() => openBlogModal()} 
+            <button
+              onClick={() => openBlogModal()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
             >
               <Plus className="h-4 w-4" />
@@ -2080,11 +2143,10 @@ function AdminPanel({ token }) {
                     </td>
                     <td className="px-6 py-4 text-xs">{post.readTime}</td>
                     <td className="px-6 py-4">
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
-                        post.published 
-                          ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20' 
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${post.published
+                          ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
                           : 'bg-amber-950/20 text-amber-400 border-amber-500/20'
-                      }`}>
+                        }`}>
                         {post.published ? 'PUBLISHED' : 'DRAFT'}
                       </span>
                     </td>
@@ -2096,23 +2158,22 @@ function AdminPanel({ token }) {
                       })}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button 
+                      <button
                         onClick={() => handleTogglePublishBlogPost(post.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          post.published 
-                            ? 'bg-amber-950/20 text-amber-400 border-amber-500/20 hover:bg-amber-900/20' 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${post.published
+                            ? 'bg-amber-950/20 text-amber-400 border-amber-500/20 hover:bg-amber-900/20'
                             : 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20 hover:bg-emerald-900/20'
-                        }`}
+                          }`}
                       >
                         {post.published ? 'Unpublish' : 'Publish'}
                       </button>
-                      <button 
+                      <button
                         onClick={() => openBlogModal(post)}
                         className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition border border-slate-700"
                       >
                         Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteBlogPost(post.id)}
                         className="px-3 py-1.5 bg-red-950/20 hover:bg-red-900/20 text-red-400 rounded-lg text-xs font-bold transition border border-red-500/20"
                       >
@@ -2147,9 +2208,9 @@ function AdminPanel({ token }) {
             <form onSubmit={handleSaveBlogPost} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Post Title</label>
-                <input 
-                  type="text" 
-                  required 
+                <input
+                  type="text"
+                  required
                   value={blogTitle}
                   onChange={e => setBlogTitle(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2160,7 +2221,7 @@ function AdminPanel({ token }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Category</label>
-                  <select 
+                  <select
                     value={blogCategory}
                     onChange={e => setBlogCategory(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2174,9 +2235,9 @@ function AdminPanel({ token }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Read Time</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     value={blogReadTime}
                     onChange={e => setBlogReadTime(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2187,8 +2248,8 @@ function AdminPanel({ token }) {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Cover Image URL</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={blogCoverImage}
                   onChange={e => setBlogCoverImage(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2198,9 +2259,9 @@ function AdminPanel({ token }) {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Short Excerpt (Summary)</label>
-                <textarea 
-                  rows="2" 
-                  required 
+                <textarea
+                  rows="2"
+                  required
                   value={blogExcerpt}
                   onChange={e => setBlogExcerpt(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -2210,9 +2271,9 @@ function AdminPanel({ token }) {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Post Content (Markdown supported)</label>
-                <textarea 
-                  rows="8" 
-                  required 
+                <textarea
+                  rows="8"
+                  required
                   value={blogContent}
                   onChange={e => setBlogContent(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm font-mono"
@@ -2221,9 +2282,9 @@ function AdminPanel({ token }) {
               </div>
 
               <div className="flex items-center space-x-2 py-2">
-                <input 
-                  type="checkbox" 
-                  id="blogPublished" 
+                <input
+                  type="checkbox"
+                  id="blogPublished"
                   checked={blogPublished}
                   onChange={e => setBlogPublished(e.target.checked)}
                   className="rounded border-slate-800 bg-slate-900 text-blue-500 focus:ring-blue-500 h-4 w-4"
@@ -2232,14 +2293,14 @@ function AdminPanel({ token }) {
               </div>
 
               <div className="flex space-x-4 pt-2">
-                <button 
+                <button
                   type="submit"
                   className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
                 >
                   Save Post
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsBlogModalOpen(false)}
                   className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
                 >
@@ -2259,9 +2320,9 @@ function AdminPanel({ token }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-400">Section Subtitle Badge</label>
-              <input 
-                type="text" 
-                required 
+              <input
+                type="text"
+                required
                 value={aboutSubTitle}
                 onChange={e => setAboutSubTitle(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2270,9 +2331,9 @@ function AdminPanel({ token }) {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-400">Section Heading Title</label>
-              <input 
-                type="text" 
-                required 
+              <input
+                type="text"
+                required
                 value={aboutTitle}
                 onChange={e => setAboutTitle(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2286,8 +2347,8 @@ function AdminPanel({ token }) {
             {[0, 1, 2].map((idx) => (
               <div key={idx} className="space-y-1">
                 <label className="text-xs font-semibold text-slate-500">Paragraph {idx + 1}</label>
-                <textarea 
-                  rows="3" 
+                <textarea
+                  rows="3"
                   value={aboutParagraphs[idx] || ''}
                   onChange={e => handleParagraphChange(idx, e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -2304,7 +2365,7 @@ function AdminPanel({ token }) {
                 <div key={idx} className="p-4 bg-slate-900/40 border border-slate-800 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                     <span className="text-xs font-bold text-blue-400">Card #{idx + 1}</span>
-                    <select 
+                    <select
                       value={stat.icon || 'Award'}
                       onChange={e => handleStatChange(idx, 'icon', e.target.value)}
                       className="bg-slate-900 border border-slate-850 focus:border-blue-500 text-xs font-semibold rounded-lg px-2 py-1 text-slate-300 outline-none"
@@ -2316,17 +2377,17 @@ function AdminPanel({ token }) {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       value={stat.label || ''}
                       onChange={e => handleStatChange(idx, 'label', e.target.value)}
                       className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-lg px-3 py-1.5 text-white outline-none text-xs"
                       placeholder="Title (e.g. Cisco CCIE Certified)"
                     />
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       value={stat.sub || ''}
                       onChange={e => handleStatChange(idx, 'sub', e.target.value)}
                       className="w-full bg-slate-950 border border-slate-850 focus:border-blue-500 rounded-lg px-3 py-1.5 text-slate-300 outline-none text-xs"
@@ -2349,8 +2410,8 @@ function AdminPanel({ token }) {
         <div className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Subscription Plans</h2>
-            <button 
-              onClick={() => openSubscriptionModal()} 
+            <button
+              onClick={() => openSubscriptionModal()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
             >
               <Plus className="h-4 w-4" />
@@ -2393,34 +2454,31 @@ function AdminPanel({ token }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        plan.featured 
-                          ? 'bg-blue-950/20 text-blue-400 border border-blue-500/20' 
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${plan.featured
+                          ? 'bg-blue-950/20 text-blue-400 border border-blue-500/20'
                           : 'bg-slate-800/40 text-slate-500 border border-slate-700/20'
-                      }`}>
+                        }`}>
                         {plan.featured ? 'YES' : 'NO'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button 
+                      <button
                         onClick={() => openSubscriptionModal(plan)}
                         disabled={plan.id.startsWith('default-')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          plan.id.startsWith('default-')
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${plan.id.startsWith('default-')
                             ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                        }`}
+                          }`}
                       >
                         Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteSubscriptionPlan(plan.id)}
                         disabled={plan.id.startsWith('default-')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          plan.id.startsWith('default-')
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${plan.id.startsWith('default-')
                             ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
                             : 'bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20'
-                        }`}
+                          }`}
                       >
                         Delete
                       </button>
@@ -2449,9 +2507,9 @@ function AdminPanel({ token }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Plan Name</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     value={subName}
                     onChange={e => setSubName(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2460,7 +2518,7 @@ function AdminPanel({ token }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Plan Type</label>
-                  <select 
+                  <select
                     value={subPlanType}
                     onChange={e => setSubPlanType(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2475,10 +2533,10 @@ function AdminPanel({ token }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Price ($)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     step="0.01"
-                    required 
+                    required
                     value={subPrice}
                     onChange={e => setSubPrice(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2487,7 +2545,7 @@ function AdminPanel({ token }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Billing Period</label>
-                  <select 
+                  <select
                     value={subBillingPeriod}
                     onChange={e => setSubBillingPeriod(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2502,8 +2560,8 @@ function AdminPanel({ token }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Badge Label (Optional)</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={subBadge}
                     onChange={e => setSubBadge(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2512,9 +2570,9 @@ function AdminPanel({ token }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">CTA Button Text</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     value={subCta}
                     onChange={e => setSubCta(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2525,9 +2583,9 @@ function AdminPanel({ token }) {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Plan Description</label>
-                <textarea 
-                  rows="2" 
-                  required 
+                <textarea
+                  rows="2"
+                  required
                   value={subDescription}
                   onChange={e => setSubDescription(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -2538,7 +2596,7 @@ function AdminPanel({ token }) {
               <div className="space-y-3">
                 <label className="text-xs font-semibold text-slate-400">Features List (Up to 4)</label>
                 {[0, 1, 2, 3].map((idx) => (
-                  <input 
+                  <input
                     key={idx}
                     type="text"
                     value={subFeatures[idx] || ''}
@@ -2554,9 +2612,9 @@ function AdminPanel({ token }) {
               </div>
 
               <div className="flex items-center space-x-2 py-1">
-                <input 
-                  type="checkbox" 
-                  id="subFeatured" 
+                <input
+                  type="checkbox"
+                  id="subFeatured"
                   checked={subFeatured}
                   onChange={e => setSubFeatured(e.target.checked)}
                   className="rounded border-slate-800 bg-slate-900 text-blue-500 focus:ring-blue-500 h-4 w-4"
@@ -2565,14 +2623,14 @@ function AdminPanel({ token }) {
               </div>
 
               <div className="flex space-x-4 pt-2">
-                <button 
+                <button
                   type="submit"
                   className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
                 >
                   Save Subscription Plan
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsSubscriptionModalOpen(false)}
                   className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
                 >
@@ -2589,8 +2647,8 @@ function AdminPanel({ token }) {
         <div className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Student Success Reviews</h2>
-            <button 
-              onClick={() => openTestimonialModal()} 
+            <button
+              onClick={() => openTestimonialModal()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
             >
               <Plus className="h-4 w-4" />
@@ -2624,25 +2682,23 @@ function AdminPanel({ token }) {
                     <td className="px-6 py-4 font-semibold text-yellow-400">{'★'.repeat(review.rating)}</td>
                     <td className="px-6 py-4 text-xs truncate max-w-[200px] text-slate-400">{review.text}</td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button 
+                      <button
                         onClick={() => openTestimonialModal(review)}
                         disabled={review.id.startsWith('default-')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          review.id.startsWith('default-')
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${review.id.startsWith('default-')
                             ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                        }`}
+                          }`}
                       >
                         Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteTestimonial(review.id)}
                         disabled={review.id.startsWith('default-')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          review.id.startsWith('default-')
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${review.id.startsWith('default-')
                             ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
                             : 'bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20'
-                        }`}
+                          }`}
                       >
                         Delete
                       </button>
@@ -2671,9 +2727,9 @@ function AdminPanel({ token }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Student Name</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     value={testName}
                     onChange={e => setTestName(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2682,9 +2738,9 @@ function AdminPanel({ token }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Role / Designation</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     value={testRole}
                     onChange={e => setTestRole(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2696,9 +2752,9 @@ function AdminPanel({ token }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Company</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     value={testCompany}
                     onChange={e => setTestCompany(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2707,7 +2763,7 @@ function AdminPanel({ token }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-400">Rating (1 to 5 Stars)</label>
-                  <select 
+                  <select
                     value={testRating}
                     onChange={e => setTestRating(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
@@ -2723,9 +2779,9 @@ function AdminPanel({ token }) {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Review Text / Success Story</label>
-                <textarea 
-                  rows="4" 
-                  required 
+                <textarea
+                  rows="4"
+                  required
                   value={testText}
                   onChange={e => setTestText(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
@@ -2734,14 +2790,14 @@ function AdminPanel({ token }) {
               </div>
 
               <div className="flex space-x-4 pt-2">
-                <button 
+                <button
                   type="submit"
                   className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
                 >
                   Save Testimonial
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsTestimonialModalOpen(false)}
                   className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
                 >
@@ -2752,6 +2808,138 @@ function AdminPanel({ token }) {
           </div>
         </div>
       )}
+
+      {/* 9. INTERVIEWS TAB */}
+      {activeTab === 'interviews' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex justify-between items-end">
+            <div>
+              <h2 className="text-3xl font-bold text-white tracking-tight">Interview Prep Q&A</h2>
+              <p className="text-slate-400 text-sm mt-1">Manage mock interview and exam questions for students.</p>
+            </div>
+            <button
+              onClick={() => openInterviewModal()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Question</span>
+            </button>
+          </div>
+
+          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-xs font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Topic</th>
+                  <th className="px-6 py-4 w-1/3">Question</th>
+                  <th className="px-6 py-4 w-1/3">Correct Answer</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900 text-slate-300">
+                {interviewsList.map((q) => (
+                  <tr key={q.id} className="hover:bg-slate-900/20 transition">
+                    <td className="px-6 py-4 font-bold text-slate-100">{q.topic}</td>
+                    <td className="px-6 py-4 text-xs text-slate-400">{q.questionText}</td>
+                    <td className="px-6 py-4 text-xs text-green-400">{q.correctAnswer}</td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button
+                        onClick={() => openInterviewModal(q)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition border bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInterview(q.id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition border bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {interviewsList.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
+                      No interview questions found. Click "Add Question" to create one.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Interview Question Modal */}
+      {isInterviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setIsInterviewModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+              <X className="h-6 w-6" />
+            </button>
+
+            <h2 className="text-xl font-bold border-b border-slate-900 pb-3">
+              {editInterviewId ? 'Edit Interview Question' : 'Add Interview Question'}
+            </h2>
+
+            <form onSubmit={handleSaveInterview} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Topic Category</label>
+                <input
+                  type="text"
+                  required
+                  value={interviewTopic}
+                  onChange={e => setInterviewTopic(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm"
+                  placeholder="e.g. CCNA, CCNP, BGP"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Question Text</label>
+                <textarea
+                  rows="3"
+                  required
+                  value={interviewQuestionText}
+                  onChange={e => setInterviewQuestionText(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                  placeholder="What is the purpose of OSPF?"
+                ></textarea>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">Correct Answer</label>
+                <textarea
+                  rows="4"
+                  required
+                  value={interviewCorrectAnswer}
+                  onChange={e => setInterviewCorrectAnswer(e.target.value)}
+                  className="w-full bg-green-950/30 border border-green-800 focus:border-green-500 rounded-xl px-4 py-3 text-slate-100 outline-none text-sm resize-none"
+                  placeholder="OSPF is a routing protocol..."
+                ></textarea>
+              </div>
+
+              <div className="flex space-x-4 pt-2">
+                <button
+                  type="submit"
+                  className="flex-grow py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-sm"
+                >
+                  Save Question
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsInterviewModalOpen(false)}
+                  className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl font-semibold transition text-sm border border-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
