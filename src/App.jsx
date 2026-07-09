@@ -4,8 +4,8 @@ import { Shield, BookOpen, Key, Server, Check, ArrowRight, X, Mail, User, Info, 
 import axios from 'axios';
 import InterviewPrep from './components/InterviewPrep';
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
-const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'http://localhost:3000';
+export const API_BASE = import.meta.env.VITE_API_BASE;
+const LANDING_URL = import.meta.env.VITE_LANDING_URL;
 const DASHBOARD_URL = window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "");
 
 // SSO Token Loader & Router Wrapper
